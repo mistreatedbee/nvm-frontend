@@ -18,7 +18,7 @@ git add -A
 echo.
 
 echo [Step 3] Creating commit...
-git commit -m "Fix vendor registration: Make banking optional, add multer middleware, integrate Cloudinary"
+git commit -m "Fix vendor registration: Banking optional, multer middleware, Cloudinary, CORS for Vercel"
 echo.
 
 echo [Step 4] Checking remote...
@@ -45,6 +45,7 @@ echo   ✅ Banking details now optional in Vendor model
 echo   ✅ Multer middleware for FormData handling
 echo   ✅ Cloudinary integration for logo uploads
 echo   ✅ Updated validation for optional banking
+echo   ✅ CORS fixed for all Vercel URLs (preview + production)
 echo.
 echo After 3 minutes, test at:
 echo https://nvm-frontend.vercel.app/vendor-registration
