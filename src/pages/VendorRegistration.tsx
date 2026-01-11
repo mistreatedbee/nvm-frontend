@@ -65,8 +65,11 @@ export function VendorRegistration() {
     register,
     handleSubmit,
     formState: { errors },
-    watch
-  } = useForm<VendorRegistrationForm>();
+    watch,
+    trigger
+  } = useForm<VendorRegistrationForm>({
+    mode: 'onChange' // Enable validation on change
+  });
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -128,6 +131,44 @@ export function VendorRegistration() {
   };
 
   const totalSteps = 4;
+
+  // Validate current step before moving to next
+  const validateStep = async (step: number) => {
+    let fieldsToValidate: any[] = [];
+    
+    switch (step) {
+      case 1: // Business Information
+        fieldsToValidate = ['storeName', 'description', 'category', 'businessType'];
+        break;
+      case 2: // Contact Information
+        fieldsToValidate = ['email', 'phone'];
+        break;
+      case 3: // Address
+        fieldsToValidate = ['street', 'city', 'state', 'zipCode', 'country'];
+        break;
+      case 4: // Banking Details
+        fieldsToValidate = [
+          'bankDetails.accountHolderName',
+          'bankDetails.bankName',
+          'bankDetails.accountType',
+          'bankDetails.accountNumber',
+          'bankDetails.branchCode'
+        ];
+        break;
+    }
+    
+    const result = await trigger(fieldsToValidate as any);
+    return result;
+  };
+
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStep);
+    if (isValid) {
+      setCurrentStep(currentStep + 1);
+    } else {
+      toast.error('Please fill in all required fields before continuing');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -628,7 +669,7 @@ export function VendorRegistration() {
               {currentStep < totalSteps && (
                 <button
                   type="button"
-                  onClick={() => setCurrentStep(currentStep + 1)}
+                  onClick={handleNext}
                   className="px-6 py-3 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-colors font-medium ml-auto"
                 >
                   Next
