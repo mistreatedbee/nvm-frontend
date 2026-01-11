@@ -58,6 +58,7 @@ export function VendorRegistration() {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string>('');
 
@@ -66,10 +67,40 @@ export function VendorRegistration() {
     handleSubmit,
     formState: { errors },
     watch,
-    trigger
+    trigger,
+    setValue,
+    getValues
   } = useForm<VendorRegistrationForm>({
     mode: 'onChange' // Enable validation on change
   });
+
+  // Load saved draft on component mount
+  React.useEffect(() => {
+    const savedDraft = localStorage.getItem('vendorRegistrationDraft');
+    if (savedDraft) {
+      try {
+        const draftData = JSON.parse(savedDraft);
+        Object.keys(draftData).forEach((key) => {
+          setValue(key as any, draftData[key]);
+        });
+        toast.success('Draft loaded! Continue where you left off.', { duration: 3000 });
+      } catch (error) {
+        console.error('Error loading draft:', error);
+      }
+    }
+  }, [setValue]);
+
+  // Auto-save draft every 30 seconds
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      const formData = getValues();
+      if (Object.keys(formData).length > 0) {
+        localStorage.setItem('vendorRegistrationDraft', JSON.stringify(formData));
+      }
+    }, 30000); // Auto-save every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [getValues]);
 
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -121,7 +152,12 @@ export function VendorRegistration() {
 
       await vendorsAPI.create(formData);
       
-      toast.success('Vendor registration submitted successfully! Awaiting admin approval.');
+      // Clear draft after successful submission
+      localStorage.removeItem('vendorRegistrationDraft');
+      
+      toast.success('Vendor registration submitted successfully! Awaiting admin approval.', {
+        duration: 5000
+      });
       navigate('/vendor/dashboard');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Registration failed');
@@ -165,8 +201,38 @@ export function VendorRegistration() {
     const isValid = await validateStep(currentStep);
     if (isValid) {
       setCurrentStep(currentStep + 1);
+      // Auto-save when moving to next step
+      const formData = getValues();
+      localStorage.setItem('vendorRegistrationDraft', JSON.stringify(formData));
     } else {
       toast.error('Please fill in all required fields before continuing');
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    setIsSavingDraft(true);
+    try {
+      const formData = getValues();
+      
+      // Save to localStorage
+      localStorage.setItem('vendorRegistrationDraft', JSON.stringify(formData));
+      
+      toast.success(
+        '✅ Draft saved successfully! You can continue later.',
+        { duration: 4000 }
+      );
+    } catch (error: any) {
+      toast.error('Failed to save draft');
+    } finally {
+      setIsSavingDraft(false);
+    }
+  };
+
+  const handleClearDraft = () => {
+    if (confirm('Are you sure you want to clear your saved draft?')) {
+      localStorage.removeItem('vendorRegistrationDraft');
+      toast.success('Draft cleared');
+      window.location.reload();
     }
   };
 
@@ -180,12 +246,40 @@ export function VendorRegistration() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-display font-bold text-nvm-dark-900 mb-2">
-            Become a Vendor
-          </h1>
-          <p className="text-gray-600">
-            Complete the registration form to start selling on NVM Marketplace
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-display font-bold text-nvm-dark-900 mb-2">
+                Become a Vendor
+              </h1>
+              <p className="text-gray-600">
+                Complete the registration form to start selling on NVM Marketplace
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={handleSaveDraft}
+                disabled={isSavingDraft}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center gap-2 disabled:opacity-50"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                </svg>
+                {isSavingDraft ? 'Saving...' : 'Save Draft'}
+              </button>
+              <button
+                type="button"
+                onClick={handleClearDraft}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors font-medium"
+                title="Clear saved draft"
+              >
+                Clear Draft
+              </button>
+            </div>
+          </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+            <strong>💾 Auto-save enabled:</strong> Your progress is automatically saved every 30 seconds. You can also click "Save Draft" to save manually and continue later.
+          </div>
         </motion.div>
 
         {/* Progress Steps */}
