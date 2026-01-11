@@ -532,6 +532,11 @@ export function VendorRegistration() {
                 animate={{ opacity: 1, x: 0 }}
                 className="space-y-6"
               >
+                <div className="bg-green-100 border-2 border-green-500 rounded-lg p-4 mb-4">
+                  <p className="text-green-800 font-bold">✅ YOU ARE NOW ON STEP 4 - BANKING DETAILS</p>
+                  <p className="text-sm text-green-700">All 5 fields should be visible below</p>
+                </div>
+
                 <h2 className="text-xl font-bold text-nvm-dark-900 mb-6 flex items-center gap-2">
                   <CreditCard className="w-6 h-6" />
                   Banking Details (For EFT Payments)
@@ -544,6 +549,10 @@ export function VendorRegistration() {
                   </p>
                 </div>
 
+                <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-4 mb-4">
+                  <p className="font-bold text-blue-800">🔹 FIELD 1 of 5: ACCOUNT HOLDER NAME</p>
+                </div>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -554,7 +563,7 @@ export function VendorRegistration() {
                       {...register('bankDetails.accountHolderName', {
                         required: 'Account holder name is required'
                       })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-red-500 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
                       placeholder="Full name as it appears on bank account"
                     />
                     {errors.bankDetails?.accountHolderName && (
@@ -564,13 +573,14 @@ export function VendorRegistration() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-4">
+                    <p className="font-bold text-blue-800 mb-2">🔹 FIELD 2 of 5: BANK NAME</p>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Bank Name *
                     </label>
                     <select
                       {...register('bankDetails.bankName', { required: 'Bank name is required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-red-500 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
                     >
                       <option value="">Select bank</option>
                       <option value="ABSA">ABSA</option>
@@ -589,13 +599,14 @@ export function VendorRegistration() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-4">
+                    <p className="font-bold text-blue-800 mb-2">🔹 FIELD 3 of 5: ACCOUNT TYPE</p>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Account Type *
                     </label>
                     <select
                       {...register('bankDetails.accountType', { required: 'Account type is required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-red-500 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
                     >
                       <option value="">Select account type</option>
                       <option value="savings">Savings</option>
@@ -607,7 +618,8 @@ export function VendorRegistration() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-4">
+                    <p className="font-bold text-blue-800 mb-2">🔹 FIELD 4 of 5: ACCOUNT NUMBER</p>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Account Number *
                     </label>
@@ -620,7 +632,7 @@ export function VendorRegistration() {
                           message: 'Account number must contain only numbers'
                         }
                       })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-red-500 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
                       placeholder="Enter account number"
                     />
                     {errors.bankDetails?.accountNumber && (
@@ -630,7 +642,8 @@ export function VendorRegistration() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="bg-blue-50 border-2 border-blue-500 rounded-lg p-4">
+                    <p className="font-bold text-blue-800 mb-2">🔹 FIELD 5 of 5: BRANCH CODE</p>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Branch Code *
                     </label>
@@ -643,7 +656,7 @@ export function VendorRegistration() {
                           message: 'Branch code must be 6 digits'
                         }
                       })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
+                      className="w-full px-4 py-3 border-2 border-red-500 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
                       placeholder="6-digit branch code"
                       maxLength={6}
                     />
