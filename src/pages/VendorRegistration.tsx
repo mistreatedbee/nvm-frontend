@@ -39,13 +39,13 @@ interface VendorRegistrationForm {
   country: string;
   zipCode: string;
   
-  // Banking Details
-  bankDetails: {
-    accountHolderName: string;
-    accountNumber: string;
-    bankName: string;
-    branchCode: string;
-    accountType: string;
+  // Banking Details (optional)
+  bankDetails?: {
+    accountHolderName?: string;
+    accountNumber?: string;
+    bankName?: string;
+    branchCode?: string;
+    accountType?: string;
   };
   
   // Social Media
@@ -136,11 +136,22 @@ export function VendorRegistration() {
       formData.append('address[country]', data.country);
       formData.append('address[zipCode]', data.zipCode);
       
-      formData.append('bankDetails[accountHolderName]', data.bankDetails.accountHolderName);
-      formData.append('bankDetails[accountNumber]', data.bankDetails.accountNumber);
-      formData.append('bankDetails[bankName]', data.bankDetails.bankName);
-      formData.append('bankDetails[branchCode]', data.bankDetails.branchCode);
-      formData.append('bankDetails[accountType]', data.bankDetails.accountType);
+      // Only append banking details if they are provided
+      if (data.bankDetails?.accountHolderName) {
+        formData.append('bankDetails[accountHolderName]', data.bankDetails.accountHolderName);
+      }
+      if (data.bankDetails?.accountNumber) {
+        formData.append('bankDetails[accountNumber]', data.bankDetails.accountNumber);
+      }
+      if (data.bankDetails?.bankName) {
+        formData.append('bankDetails[bankName]', data.bankDetails.bankName);
+      }
+      if (data.bankDetails?.branchCode) {
+        formData.append('bankDetails[branchCode]', data.bankDetails.branchCode);
+      }
+      if (data.bankDetails?.accountType) {
+        formData.append('bankDetails[accountType]', data.bankDetails.accountType);
+      }
       
       if (data.facebook) formData.append('socialMedia[facebook]', data.facebook);
       if (data.instagram) formData.append('socialMedia[instagram]', data.instagram);
