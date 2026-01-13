@@ -28,6 +28,9 @@ import { VendorApprovalStatus } from './pages/VendorApprovalStatus';
 import { OrderTracking } from './pages/OrderTracking';
 import { VendorOrderManagement } from './pages/VendorOrderManagement';
 import { VendorPublicProfile } from './pages/VendorPublicProfile';
+import { Profile } from './pages/Profile';
+import { OrderInvoice } from './pages/OrderInvoice';
+import { Orders } from './pages/Orders';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -68,13 +71,18 @@ function App() {
         {/* Public Vendor Profile */}
         <Route path="/vendors/:vendorId/profile" element={<VendorPublicProfile />} />
         
-        {/* Order Tracking */}
+        {/* Order Tracking & Invoice */}
+        <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:orderId/track" element={<OrderTracking />} />
+        <Route path="/orders/:orderId/invoice" element={<OrderInvoice />} />
         
         {/* Shopping Routes */}
           <Route path="/cart" element={<Cart />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/vendor/setup" element={<VendorProfileSetup />} />
+        
+        {/* Profile */}
+        <Route path="/profile" element={<Profile />} />
         
         {/* Fallback route */}
         <Route path="*" element={<MarketplaceHome />} />
