@@ -30,7 +30,7 @@ export function AdminProducts() {
     try {
       const params: any = { limit: 100 };
       if (filterStatus !== 'all') params.status = filterStatus;
-      const response = await productsAPI.getAll(params);
+      const response = await productsAPI.getAdminProducts(params);
       setProducts(response.data.data || []);
     } catch (error) {
       console.error('Error fetching products:', error);

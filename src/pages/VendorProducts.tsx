@@ -28,7 +28,7 @@ export function VendorProducts() {
     try {
       const [vendorRes, productsRes] = await Promise.all([
         vendorsAPI.getMyProfile(),
-        productsAPI.getAll()
+        productsAPI.getMyProducts({ limit: 200 })
       ]);
       setVendor(vendorRes.data.data);
       setProducts(productsRes.data.data || []);
