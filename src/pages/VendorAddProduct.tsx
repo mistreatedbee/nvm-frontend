@@ -16,6 +16,28 @@ import {
   Layers
 } from 'lucide-react';
 
+const DEFAULT_CATEGORIES: Array<{ name: string; slug: string }> = [
+  { name: 'Fashion & Clothing', slug: 'fashion-clothing' },
+  { name: 'Electronics', slug: 'electronics' },
+  { name: 'Home & Garden', slug: 'home-garden' },
+  { name: 'Health & Beauty', slug: 'health-beauty' },
+  { name: 'Food & Beverages', slug: 'food-beverages' },
+  { name: 'Sports & Outdoors', slug: 'sports-outdoors' },
+  { name: 'Books & Media', slug: 'books-media' },
+  { name: 'Art & Crafts', slug: 'art-crafts' },
+  { name: 'Services', slug: 'services' },
+  { name: 'Baby & Kids', slug: 'baby-kids' },
+  { name: 'Music & Instruments', slug: 'music-instruments' },
+  { name: 'Photography', slug: 'photography' },
+  { name: 'Jewelry & Watches', slug: 'jewelry-watches' },
+  { name: 'Gifts & Party', slug: 'gifts-party' },
+  { name: 'Automotive', slug: 'automotive' }
+];
+
+function isMongoId(value: string) {
+  return /^[a-f\d]{24}$/i.test(value);
+}
+
 interface ImageFile {
   file: File;
   preview: string;
@@ -51,18 +73,32 @@ export function VendorAddProduct() {
   }, []);
 
   const fetchData = async () => {
-    try {
-      const [vendorRes, categoriesRes] = await Promise.all([
-        vendorsAPI.getMyProfile(),
-        categoriesAPI.getAll()
-      ]);
-      setVendor(vendorRes.data.data);
-      setCategories(categoriesRes.data.data || []);
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to load data');
-    } finally {
-      setLoading(false);
+    const [vendorResult, categoriesResult] = await Promise.allSettled([
+      vendorsAPI.getMyProfile(),
+      categoriesAPI.getAll()
+    ]);
+
+    if (vendorResult.status === 'fulfilled') {
+      setVendor(vendorResult.value.data.data);
+    } else {
+      // Vendor profile is required to proceed; keep existing UX below (create profile / approval)
+      console.error('Error fetching vendor profile:', vendorResult.reason);
+      setVendor(null);
     }
+
+    if (categoriesResult.status === 'fulfilled') {
+      const categoriesData =
+        (categoriesResult.value as any).data?.data ??
+        (categoriesResult.value as any).data ??
+        [];
+      setCategories(Array.isArray(categoriesData) ? categoriesData : []);
+    } else {
+      console.error('Error fetching categories:', categoriesResult.reason);
+      // Don’t block the page; we’ll still show DEFAULT_CATEGORIES in the dropdown
+      setCategories([]);
+    }
+
+    setLoading(false);
   };
 
   const handleInputChange = (field: string, value: any) => {
@@ -166,6 +202,19 @@ export function VendorAddProduct() {
     setSubmitting(true);
 
     try {
+      // Ensure we submit a real Category ObjectId to the backend
+      const selectedCategory = formData.category;
+      let categoryId = selectedCategory;
+      if (!isMongoId(selectedCategory)) {
+        const match = categories.find((c: any) => c?._id && (c.slug === selectedCategory || c.name === selectedCategory));
+        if (!match?._id) {
+          toast.error('Categories are not loaded yet. Please refresh and try again.');
+          setSubmitting(false);
+          return;
+        }
+        categoryId = match._id;
+      }
+
       // Convert image files to URLs (base64 data URLs for now)
       // In production, upload to Cloudinary first and get URLs
       const imageUrls = await Promise.all(
@@ -180,7 +229,7 @@ export function VendorAddProduct() {
         description: formData.description.trim(),
         shortDescription: formData.shortDescription.trim(),
         price: parseFloat(formData.price),
-        category: formData.category,
+        category: categoryId,
         productType: formData.productType,
         stock: formData.stock ? parseInt(formData.stock) : 0,
         sku: formData.sku.trim() || undefined,
@@ -360,13 +409,18 @@ export function VendorAddProduct() {
                   required
                 >
                   <option value="">Select a category</option>
-                  {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>
+                  {(categories.length > 0 ? categories : DEFAULT_CATEGORIES).map((cat: any) => (
+                    <option key={cat._id || cat.slug || cat.name} value={cat._id || cat.slug || cat.name}>
                       {cat.name}
                     </option>
                   ))}
                 </select>
               </div>
+              {categories.length === 0 && (
+                <p className="mt-1 text-xs text-gray-500">
+                  Using built-in categories. If product creation fails, the backend may need default categories seeded.
+                </p>
+              )}
             </div>
           </div>
 
