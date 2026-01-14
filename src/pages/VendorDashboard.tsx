@@ -206,7 +206,10 @@ export function VendorDashboard() {
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
               <h2 className="text-xl font-display font-bold text-nvm-dark-900 mb-6">Quick Actions</h2>
               <div className="space-y-3">
-                <button className="w-full flex items-center p-4 rounded-lg border-2 border-nvm-green-200 bg-nvm-green-50 hover:bg-nvm-green-100 transition-all group">
+                <Link
+                  to="/vendor/products/new"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-nvm-green-200 bg-nvm-green-50 hover:bg-nvm-green-100 transition-all group"
+                >
                   <div className="w-10 h-10 bg-nvm-green-500 rounded-lg flex items-center justify-center">
                     <Plus className="w-5 h-5 text-white" />
                   </div>
@@ -214,7 +217,7 @@ export function VendorDashboard() {
                     <p className="font-semibold text-nvm-dark-900">Add Product</p>
                     <p className="text-sm text-gray-500">List new item</p>
                   </div>
-                </button>
+                </Link>
 
                 <Link
                   to="/vendor/products"
@@ -277,10 +280,13 @@ export function VendorDashboard() {
                 <div className="text-center py-12">
                   <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500 mb-4">No products yet</p>
-                  <button className="inline-flex items-center px-6 py-3 bg-nvm-green-500 text-white rounded-lg hover:bg-nvm-green-600 transition-colors">
+                  <Link
+                    to="/vendor/products/new"
+                    className="inline-flex items-center px-6 py-3 bg-nvm-green-500 text-white rounded-lg hover:bg-nvm-green-600 transition-colors"
+                  >
                     <Plus className="w-5 h-5 mr-2" />
                     Add Your First Product
-                  </button>
+                  </Link>
                 </div>
               ) : (
                 <div className="space-y-4">

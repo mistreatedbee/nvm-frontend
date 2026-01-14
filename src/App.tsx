@@ -10,6 +10,7 @@ import { AdminDashboard } from './pages/AdminDashboard';
 import { CustomerDashboard } from './pages/CustomerDashboard';
 import { VendorDashboard } from './pages/VendorDashboard';
 import { VendorProducts } from './pages/VendorProducts';
+import { VendorAddProduct } from './pages/VendorAddProduct';
 import { VendorOrders } from './pages/VendorOrders';
 import { AdminUsers } from './pages/AdminUsers';
 import { Login } from './pages/Login';
@@ -55,6 +56,7 @@ function App() {
         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
         <Route path="/vendor/dashboard" element={<VendorDashboard />} />
         <Route path="/vendor/products" element={<VendorProducts />} />
+        <Route path="/vendor/products/new" element={<VendorAddProduct />} />
         <Route path="/vendor/orders" element={<VendorOrders />} />
         <Route path="/vendor/analytics" element={<VendorAnalytics />} />
         <Route path="/admin" element={<AdminDashboard />} />
