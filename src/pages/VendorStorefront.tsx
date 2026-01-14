@@ -84,6 +84,13 @@ export function VendorStorefront() {
       
       {/* Header Banner */}
       <div className="h-64 md:h-80 bg-gradient-to-br from-nvm-green-primary to-nvm-green-600 relative overflow-hidden">
+        {vendor.banner?.url ? (
+          <img 
+            src={vendor.banner.url} 
+            alt={vendor.storeName}
+            className="w-full h-full object-cover"
+          />
+        ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
       </div>
 
