@@ -16,6 +16,12 @@ import {
   Layers
 } from 'lucide-react';
 
+interface ImageFile {
+  file: File;
+  preview: string;
+  url?: string;
+}
+
 export function VendorAddProduct() {
   const navigate = useNavigate();
   const [vendor, setVendor] = useState<any>(null);
@@ -38,7 +44,7 @@ export function VendorAddProduct() {
     lowStockThreshold: '5'
   });
 
-  const [imageInputs, setImageInputs] = useState(['']);
+  const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -63,19 +69,40 @@ export function VendorAddProduct() {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleImageUrlChange = (index: number, value: string) => {
-    const newInputs = [...imageInputs];
-    newInputs[index] = value;
-    setImageInputs(newInputs);
+  const handleImageFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    Array.from(files).forEach(file => {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        toast.error(`${file.name} is not an image file`);
+        return;
+      }
+
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name} is too large. Maximum size is 5MB`);
+        return;
+      }
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImageFiles(prev => [...prev, {
+          file,
+          preview: reader.result as string
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // Reset input
+    e.target.value = '';
   };
 
-  const addImageInput = () => {
-    setImageInputs([...imageInputs, '']);
-  };
-
-  const removeImageInput = (index: number) => {
-    const newInputs = imageInputs.filter((_, i) => i !== index);
-    setImageInputs(newInputs);
+  const removeImageFile = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleTagInput = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -99,6 +126,18 @@ export function VendorAddProduct() {
     }));
   };
 
+  const convertImageToUrl = async (imageFile: ImageFile): Promise<string> => {
+    // Convert file to base64 data URL (simple approach for now)
+    // In production, you'd upload to Cloudinary or similar service
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.readAsDataURL(imageFile.file);
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -119,19 +158,23 @@ export function VendorAddProduct() {
       toast.error('Category is required');
       return;
     }
-    if (imageInputs.filter(url => url.trim()).length === 0) {
+    if (imageFiles.length === 0) {
       toast.error('At least one product image is required');
       return;
     }
 
-    // Prepare images array
-    const images = imageInputs
-      .filter(url => url.trim())
-      .map(url => ({ url: url.trim() }));
-
     setSubmitting(true);
 
     try {
+      // Convert image files to URLs (base64 data URLs for now)
+      // In production, upload to Cloudinary first and get URLs
+      const imageUrls = await Promise.all(
+        imageFiles.map(img => convertImageToUrl(img))
+      );
+
+      // Prepare images array
+      const images = imageUrls.map(url => ({ url }));
+
       const productData = {
         name: formData.name.trim(),
         description: formData.description.trim(),
@@ -379,40 +422,56 @@ export function VendorAddProduct() {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Product Images <span className="text-red-500">*</span>
             </label>
-            <p className="text-xs text-gray-500 mb-3">Enter image URLs (at least one required)</p>
-            <div className="space-y-3">
-              {imageInputs.map((url, index) => (
-                <div key={index} className="flex gap-2">
-                  <div className="flex-1 relative">
-                    <ImageIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-                    <input
-                      type="url"
-                      value={url}
-                      onChange={(e) => handleImageUrlChange(index, e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-                      placeholder="https://example.com/image.jpg"
-                    />
+            <p className="text-xs text-gray-500 mb-3">Upload images from your device (at least one required, max 5MB each)</p>
+            
+            {/* Image Upload Area */}
+            <div className="mb-4">
+              <label className="cursor-pointer">
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-nvm-green-primary hover:bg-nvm-green-50/50 transition-all">
+                  <div className="flex flex-col items-center">
+                    <Upload className="w-8 h-8 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-600 text-center">
+                      Click to upload images or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      PNG, JPG, GIF up to 5MB each
+                    </p>
                   </div>
-                  {imageInputs.length > 1 && (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={handleImageFileSelect}
+                    className="hidden"
+                  />
+                </div>
+              </label>
+            </div>
+
+            {/* Image Previews */}
+            {imageFiles.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                {imageFiles.map((imageFile, index) => (
+                  <div key={index} className="relative group">
+                    <div className="aspect-square rounded-lg overflow-hidden border border-gray-200">
+                      <img
+                        src={imageFile.preview}
+                        alt={`Preview ${index + 1}`}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
                     <button
                       type="button"
-                      onClick={() => removeImageInput(index)}
-                      className="px-4 py-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      onClick={() => removeImageFile(index)}
+                      className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-1.5 hover:bg-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
-                      <X className="w-5 h-5" />
+                      <X className="w-4 h-4" />
                     </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addImageInput}
-                className="w-full py-3 border-2 border-dashed border-gray-300 rounded-lg text-gray-600 hover:border-nvm-green-primary hover:text-nvm-green-primary transition-colors flex items-center justify-center gap-2"
-              >
-                <Upload className="w-5 h-5" />
-                Add Another Image
-              </button>
-            </div>
+                    <p className="text-xs text-gray-500 mt-1 truncate">{imageFile.file.name}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Tags */}
