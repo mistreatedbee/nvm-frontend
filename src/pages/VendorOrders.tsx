@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
+import { LoadingScreen } from '../components/LoadingScreen';
 import { ordersAPI, vendorsAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
 import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
@@ -72,6 +73,15 @@ export function VendorOrders() {
     };
     return statusFlow[currentStatus];
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <LoadingScreen title="Loading orders…" subtitle="Fetching your latest orders" />
+      </div>
+    );
+  }
 
   if (!vendor) {
     return (

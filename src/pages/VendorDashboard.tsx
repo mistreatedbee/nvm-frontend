@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
+import { LoadingScreen } from '../components/LoadingScreen';
 import { useAuthStore } from '../lib/store';
 import { vendorsAPI, productsAPI, ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
@@ -38,6 +39,7 @@ export function VendorDashboard() {
   }, []);
 
   const fetchVendorData = async () => {
+    setLoading(true);
     try {
       const [vendorRes, productsRes, ordersRes] = await Promise.all([
         vendorsAPI.getMyProfile(),
@@ -54,7 +56,16 @@ export function VendorDashboard() {
       // Fetch analytics
       if (vendorData?._id) {
         const analyticsRes = await vendorsAPI.getAnalytics(vendorData._id);
-        setAnalytics(analyticsRes.data.data);
+        const raw = analyticsRes.data.data;
+        // Backend returns { overview, products, reviews, ... } — map into the dashboard fields.
+        setAnalytics({
+          totalProducts: raw?.products?.total ?? 0,
+          activeProducts: raw?.products?.active ?? 0,
+          totalSales: raw?.overview?.totalItemsSold ?? 0,
+          totalRevenue: raw?.overview?.totalRevenue ?? 0,
+          rating: raw?.reviews?.averageRating ?? vendorData?.rating ?? 0,
+          totalReviews: raw?.reviews?.total ?? vendorData?.totalReviews ?? 0
+        });
       }
     } catch (error) {
       console.error('Error fetching vendor data:', error);
@@ -62,6 +73,15 @@ export function VendorDashboard() {
       setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <LoadingScreen title="Loading your dashboard…" subtitle="Fetching your store, products, orders, and analytics" />
+      </div>
+    );
+  }
 
   if (!vendor) {
     return (
@@ -190,7 +210,7 @@ export function VendorDashboard() {
               <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
                 <Star className="w-6 h-6 fill-current" />
               </div>
-              <span className="text-3xl font-bold">{analytics.rating.toFixed(1)}</span>
+              <span className="text-3xl font-bold">{Number(analytics.rating || 0).toFixed(1)}</span>
             </div>
             <p className="text-sm font-medium opacity-90">Store Rating</p>
             <p className="text-xs opacity-75 mt-1">{analytics.totalReviews} reviews</p>
@@ -314,8 +334,8 @@ export function VendorDashboard() {
                         <p className="text-sm text-gray-500">{product.category?.name}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold text-nvm-gold-500">R {product.price.toFixed(2)}</p>
-                        <p className="text-sm text-gray-500">{product.stock} in stock</p>
+                        <p className="font-bold text-nvm-gold-500">R {Number(product.price ?? 0).toFixed(2)}</p>
+                        <p className="text-sm text-gray-500">{Number(product.stock ?? 0)} in stock</p>
                       </div>
                       <div className="flex gap-2">
                         <Link to={`/product/${product._id}`} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
