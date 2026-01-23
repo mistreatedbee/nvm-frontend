@@ -65,7 +65,9 @@ export const vendorsAPI = {
   getBySlug: (slug: string) => api.get(`/vendors/slug/${slug}`),
   getMyProfile: () => api.get('/vendors/me/profile'),
   update: (id: string, data: any) => api.put(`/vendors/${id}`, data),
-  getAnalytics: (vendorId: string) => api.get(`/analytics/vendor/${vendorId}`),
+  // Vendor analytics is derived from the authenticated vendor; no vendorId is required.
+  // Keep vendorId optional for backward compatibility with older call sites.
+  getAnalytics: (_vendorId?: string) => api.get(`/analytics/vendor`),
   approve: (id: string) => api.put(`/vendors/${id}/approve`),
   reject: (id: string, data: any) => api.put(`/vendors/${id}/reject`, data),
 };

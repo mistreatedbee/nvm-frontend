@@ -4,6 +4,7 @@ import { ShoppingBag, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useCartStore, useWishlistStore } from '../lib/store';
 import toast from 'react-hot-toast';
+import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
 
 interface ProductCardProps {
   product: {
@@ -25,7 +26,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore();
   
   const productId = product._id || product.id || '';
-  const productImage = product.image || product.images?.[0]?.url || 'https://via.placeholder.com/400';
+  const productImage = product.image || product.images?.[0]?.url || DEFAULT_IMAGE_DATA_URI;
   const categoryName = typeof product.category === 'string' ? product.category : product.category?.name || 'Product';
   const inWishlist = isInWishlist(productId);
 

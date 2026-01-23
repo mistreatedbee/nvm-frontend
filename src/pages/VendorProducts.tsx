@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { productsAPI, vendorsAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
+import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
 import toast from 'react-hot-toast';
 import { 
   Plus, 
@@ -28,7 +29,8 @@ export function VendorProducts() {
     try {
       const [vendorRes, productsRes] = await Promise.all([
         vendorsAPI.getMyProfile(),
-        productsAPI.getMyProducts({ limit: 200 })
+        // Backend enforces limit <= 100 via paginationValidation middleware
+        productsAPI.getMyProducts({ limit: 100 })
       ]);
       setVendor(vendorRes.data.data);
       setProducts(productsRes.data.data || []);
@@ -98,9 +100,18 @@ export function VendorProducts() {
             </h1>
             <p className="text-gray-600">Manage your product inventory</p>
           </div>
+          {products.length >= 2 && (
+            <div className="hidden sm:block text-sm text-gray-600">
+              Product limit reached (2). Delete a product to add another.
+            </div>
+          )}
           <Link
             to="/vendor/products/new"
-            className="inline-flex items-center gap-2 px-6 py-3 bg-nvm-green-primary text-white rounded-xl font-semibold hover:bg-nvm-green-dark shadow-lg transition-all"
+            className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold shadow-lg transition-all ${
+              products.length >= 2
+                ? 'bg-gray-300 text-gray-600 cursor-not-allowed pointer-events-none'
+                : 'bg-nvm-green-primary text-white hover:bg-nvm-green-dark'
+            }`}
           >
             <Plus className="w-5 h-5" />
             Add Product
@@ -199,7 +210,7 @@ export function VendorProducts() {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
                           <img
-                            src={product.images?.[0]?.url || 'https://via.placeholder.com/100'}
+                            src={product.images?.[0]?.url || DEFAULT_IMAGE_DATA_URI}
                             alt={product.name}
                             className="w-12 h-12 rounded-lg object-cover"
                           />

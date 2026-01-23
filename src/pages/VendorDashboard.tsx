@@ -5,6 +5,7 @@ import { Navbar } from '../components/Navbar';
 import { useAuthStore } from '../lib/store';
 import { vendorsAPI, productsAPI, ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
+import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
 import { 
   Package, 
   ShoppingBag, 
@@ -40,7 +41,8 @@ export function VendorDashboard() {
     try {
       const [vendorRes, productsRes, ordersRes] = await Promise.all([
         vendorsAPI.getMyProfile(),
-        productsAPI.getAll({ limit: 5 }),
+        // Vendors should see/manage their own products, not the public catalog
+        productsAPI.getMyProducts({ limit: 5 }),
         ordersAPI.getVendorOrders({ limit: 5 })
       ]);
 
@@ -208,14 +210,20 @@ export function VendorDashboard() {
               <div className="space-y-3">
                 <Link
                   to="/vendor/products/new"
-                  className="w-full flex items-center p-4 rounded-lg border-2 border-nvm-green-200 bg-nvm-green-50 hover:bg-nvm-green-100 transition-all group"
+                className={`w-full flex items-center p-4 rounded-lg border-2 transition-all group ${
+                  analytics.totalProducts >= 2
+                    ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed pointer-events-none'
+                    : 'border-nvm-green-200 bg-nvm-green-50 hover:bg-nvm-green-100'
+                }`}
                 >
                   <div className="w-10 h-10 bg-nvm-green-500 rounded-lg flex items-center justify-center">
                     <Plus className="w-5 h-5 text-white" />
                   </div>
                   <div className="ml-4 text-left">
                     <p className="font-semibold text-nvm-dark-900">Add Product</p>
-                    <p className="text-sm text-gray-500">List new item</p>
+                  <p className="text-sm text-gray-500">
+                    {analytics.totalProducts >= 2 ? 'Limit reached (2 products)' : 'List new item'}
+                  </p>
                   </div>
                 </Link>
 
@@ -297,7 +305,7 @@ export function VendorDashboard() {
                       className="flex items-center gap-4 border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all"
                     >
                       <img
-                        src={product.images?.[0]?.url || 'https://via.placeholder.com/100'}
+                        src={product.images?.[0]?.url || DEFAULT_IMAGE_DATA_URI}
                         alt={product.name}
                         className="w-16 h-16 object-cover rounded-lg"
                       />
@@ -310,12 +318,12 @@ export function VendorDashboard() {
                         <p className="text-sm text-gray-500">{product.stock} in stock</p>
                       </div>
                       <div className="flex gap-2">
-                        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        <Link to={`/product/${product._id}`} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                           <Eye className="w-5 h-5 text-gray-600" />
-                        </button>
-                        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                        </Link>
+                        <Link to={`/vendor/products/edit/${product._id}`} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
                           <Edit className="w-5 h-5 text-gray-600" />
-                        </button>
+                        </Link>
                       </div>
                     </motion.div>
                   ))}

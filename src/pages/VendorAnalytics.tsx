@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
 import { analyticsAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
+import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
 import { 
   TrendingUp, 
   ShoppingBag, 
@@ -226,7 +227,7 @@ export function VendorAnalytics() {
                     {index + 1}
                   </div>
                   <img
-                    src={product.images?.[0]?.url || 'https://via.placeholder.com/60'}
+                    src={product.images?.[0]?.url || DEFAULT_IMAGE_DATA_URI}
                     alt={product.name}
                     className="w-12 h-12 object-cover rounded-lg"
                   />

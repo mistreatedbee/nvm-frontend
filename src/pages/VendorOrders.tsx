@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
 import { ordersAPI, vendorsAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
+import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
 import toast from 'react-hot-toast';
 import { 
   ShoppingBag,
@@ -183,7 +184,8 @@ export function VendorOrders() {
                       <div className="md:col-span-2">
                         <span className="text-gray-600">Address:</span>{' '}
                         <span className="font-medium">
-                          {order.shippingAddress?.street}, {order.shippingAddress?.city}, {order.shippingAddress?.province} {order.shippingAddress?.postalCode}
+                          {order.shippingAddress?.street}, {order.shippingAddress?.city}, {order.shippingAddress?.state}{' '}
+                          {order.shippingAddress?.zipCode}
                         </span>
                       </div>
                     </div>
@@ -197,7 +199,7 @@ export function VendorOrders() {
                         <div key={index} className="flex items-center justify-between text-sm">
                           <div className="flex items-center gap-3">
                             <img
-                              src={item.product?.images?.[0]?.url || 'https://via.placeholder.com/50'}
+                              src={item.product?.images?.[0]?.url || item.image || DEFAULT_IMAGE_DATA_URI}
                               alt={item.name}
                               className="w-12 h-12 rounded-lg object-cover"
                             />

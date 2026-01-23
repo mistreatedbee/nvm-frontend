@@ -1,56 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
-import { productsAPI, categoriesAPI, vendorsAPI } from '../lib/api';
+import { categoriesAPI, productsAPI, vendorsAPI } from '../lib/api';
 import toast from 'react-hot-toast';
-import { 
-  ArrowLeft,
-  Upload,
-  X,
-  Image as ImageIcon,
-  Package,
-  DollarSign,
-  FileText,
-  Tag,
-  Layers
-} from 'lucide-react';
-
-const DEFAULT_CATEGORIES: Array<{ name: string; slug: string }> = [
-  { name: 'Fashion & Clothing', slug: 'fashion-clothing' },
-  { name: 'Electronics', slug: 'electronics' },
-  { name: 'Home & Garden', slug: 'home-garden' },
-  { name: 'Health & Beauty', slug: 'health-beauty' },
-  { name: 'Food & Beverages', slug: 'food-beverages' },
-  { name: 'Sports & Outdoors', slug: 'sports-outdoors' },
-  { name: 'Books & Media', slug: 'books-media' },
-  { name: 'Art & Crafts', slug: 'art-crafts' },
-  { name: 'Services', slug: 'services' },
-  { name: 'Baby & Kids', slug: 'baby-kids' },
-  { name: 'Music & Instruments', slug: 'music-instruments' },
-  { name: 'Photography', slug: 'photography' },
-  { name: 'Jewelry & Watches', slug: 'jewelry-watches' },
-  { name: 'Gifts & Party', slug: 'gifts-party' },
-  { name: 'Automotive', slug: 'automotive' }
-];
+import { ArrowLeft, Upload, X, DollarSign, Tag } from 'lucide-react';
 
 function isMongoId(value: string) {
   return /^[a-f\d]{24}$/i.test(value);
 }
 
 interface ImageFile {
-  file: File;
+  // For existing images, `file` will be undefined and `url` will be set.
+  file?: File;
   preview: string;
   url?: string;
 }
 
-export function VendorAddProduct() {
+export function VendorEditProduct() {
+  const { id } = useParams();
   const navigate = useNavigate();
+
   const [vendor, setVendor] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [myProductCount, setMyProductCount] = useState<number>(0);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -61,7 +35,6 @@ export function VendorAddProduct() {
     productType: 'physical',
     stock: '',
     sku: '',
-    images: [] as string[],
     tags: [] as string[],
     trackInventory: true,
     lowStockThreshold: '5'
@@ -69,43 +42,56 @@ export function VendorAddProduct() {
 
   const [imageFiles, setImageFiles] = useState<ImageFile[]>([]);
 
+  const productId = useMemo(() => id || '', [id]);
+
   useEffect(() => {
+    if (!productId) return;
     fetchData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productId]);
 
   const fetchData = async () => {
-    const [vendorResult, categoriesResult, myProductsResult] = await Promise.allSettled([
-      vendorsAPI.getMyProfile(),
-      categoriesAPI.getAll(),
-      productsAPI.getMyProducts({ limit: 2 })
-    ]);
+    try {
+      const [vendorRes, categoriesRes, productRes] = await Promise.all([
+        vendorsAPI.getMyProfile(),
+        categoriesAPI.getAll(),
+        productsAPI.getById(productId)
+      ]);
 
-    if (vendorResult.status === 'fulfilled') {
-      setVendor(vendorResult.value.data.data);
-    } else {
-      // Vendor profile is required to proceed; keep existing UX below (create profile / approval)
-      console.error('Error fetching vendor profile:', vendorResult.reason);
-      setVendor(null);
-    }
+      setVendor(vendorRes.data.data);
 
-    if (categoriesResult.status === 'fulfilled') {
       const categoriesData =
-        (categoriesResult.value as any).data?.data ??
-        (categoriesResult.value as any).data ??
+        (categoriesRes as any).data?.data ??
+        (categoriesRes as any).data ??
         [];
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
-    } else {
-      console.error('Error fetching categories:', categoriesResult.reason);
-      // Don’t block the page; we’ll still show DEFAULT_CATEGORIES in the dropdown
-      setCategories([]);
-    }
 
-    if (myProductsResult.status === 'fulfilled') {
-      const data = (myProductsResult.value as any).data?.data || [];
-      setMyProductCount(Array.isArray(data) ? data.length : 0);
-    }
+      const product = productRes.data.data;
 
-    setLoading(false);
+      setFormData({
+        name: product?.name || '',
+        description: product?.description || '',
+        shortDescription: product?.shortDescription || '',
+        price: product?.price != null ? String(product.price) : '',
+        category: typeof product?.category === 'string' ? product.category : product?.category?._id || '',
+        productType: product?.productType || 'physical',
+        stock: product?.stock != null ? String(product.stock) : '',
+        sku: product?.sku || '',
+        tags: Array.isArray(product?.tags) ? product.tags : [],
+        trackInventory: product?.trackInventory ?? true,
+        lowStockThreshold: product?.lowStockThreshold != null ? String(product.lowStockThreshold) : '5'
+      });
+
+      const existingImages: ImageFile[] = (product?.images || [])
+        .filter((img: any) => img?.url)
+        .map((img: any) => ({ preview: img.url, url: img.url }));
+      setImageFiles(existingImages);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to load product');
+      navigate('/vendor/products');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleInputChange = (field: string, value: any) => {
@@ -117,30 +103,22 @@ export function VendorAddProduct() {
     if (!files || files.length === 0) return;
 
     Array.from(files).forEach(file => {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         toast.error(`${file.name} is not an image file`);
         return;
       }
-
-      // Validate file size (5MB max)
       if (file.size > 5 * 1024 * 1024) {
         toast.error(`${file.name} is too large. Maximum size is 5MB`);
         return;
       }
 
-      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
-        setImageFiles(prev => [...prev, {
-          file,
-          preview: reader.result as string
-        }]);
+        setImageFiles(prev => [...prev, { file, preview: reader.result as string }]);
       };
       reader.readAsDataURL(file);
     });
 
-    // Reset input
     e.target.value = '';
   };
 
@@ -153,63 +131,35 @@ export function VendorAddProduct() {
       e.preventDefault();
       const tag = e.currentTarget.value.trim();
       if (!formData.tags.includes(tag)) {
-        setFormData(prev => ({
-          ...prev,
-          tags: [...prev.tags, tag]
-        }));
+        setFormData(prev => ({ ...prev, tags: [...prev.tags, tag] }));
       }
       e.currentTarget.value = '';
     }
   };
 
   const removeTag = (tag: string) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(t => t !== tag)
-    }));
+    setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
   };
 
-  const convertImageToUrl = async (imageFile: ImageFile): Promise<string> => {
-    // Convert file to base64 data URL (simple approach for now)
-    // In production, you'd upload to Cloudinary or similar service
-    return new Promise((resolve) => {
+  const convertFileToDataUrl = async (file: File): Promise<string> =>
+    new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        resolve(reader.result as string);
-      };
-      reader.readAsDataURL(imageFile.file);
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.readAsDataURL(file);
     });
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Validate
-    if (!formData.name.trim()) {
-      toast.error('Product name is required');
-      return;
-    }
-    if (!formData.description.trim()) {
-      toast.error('Product description is required');
-      return;
-    }
-    if (!formData.price || parseFloat(formData.price) <= 0) {
-      toast.error('Valid price is required');
-      return;
-    }
-    if (!formData.category) {
-      toast.error('Category is required');
-      return;
-    }
-    if (imageFiles.length === 0) {
-      toast.error('At least one product image is required');
-      return;
-    }
+
+    if (!formData.name.trim()) return toast.error('Product name is required');
+    if (!formData.description.trim()) return toast.error('Product description is required');
+    if (!formData.price || parseFloat(formData.price) <= 0) return toast.error('Valid price is required');
+    if (!formData.category) return toast.error('Category is required');
+    if (imageFiles.length === 0) return toast.error('At least one product image is required');
 
     setSubmitting(true);
-
     try {
-      // Ensure we submit a real Category ObjectId to the backend
+      // Ensure category is ObjectId if categories loaded
       const selectedCategory = formData.category;
       let categoryId = selectedCategory;
       if (!isMongoId(selectedCategory)) {
@@ -222,16 +172,16 @@ export function VendorAddProduct() {
         categoryId = match._id;
       }
 
-      // Convert image files to URLs (base64 data URLs for now)
-      // In production, upload to Cloudinary first and get URLs
-      const imageUrls = await Promise.all(
-        imageFiles.map(img => convertImageToUrl(img))
-      );
-
-      // Prepare images array
+      // Build final images array: keep existing URLs; convert newly added files to data URLs
+      const imageUrls: string[] = [];
+      for (const img of imageFiles) {
+        if (img.file) imageUrls.push(await convertFileToDataUrl(img.file));
+        else if (img.url) imageUrls.push(img.url);
+        else if (img.preview) imageUrls.push(img.preview);
+      }
       const images = imageUrls.map(url => ({ url }));
 
-      const productData = {
+      const productData: any = {
         name: formData.name.trim(),
         description: formData.description.trim(),
         shortDescription: formData.shortDescription.trim(),
@@ -246,11 +196,11 @@ export function VendorAddProduct() {
         lowStockThreshold: parseInt(formData.lowStockThreshold)
       };
 
-      await productsAPI.create(productData);
-      toast.success('Product created successfully!');
+      await productsAPI.update(productId, productData);
+      toast.success('Product updated successfully!');
       navigate('/vendor/products');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to create product');
+      toast.error(error.response?.data?.message || 'Failed to update product');
     } finally {
       setSubmitting(false);
     }
@@ -291,7 +241,7 @@ export function VendorAddProduct() {
         <div className="max-w-7xl mx-auto px-4 py-12 text-center">
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 max-w-md mx-auto">
             <h2 className="text-xl font-bold text-yellow-800 mb-2">Pending Approval</h2>
-            <p className="text-yellow-700 mb-4">Your vendor profile is pending admin approval. You'll be able to add products once approved.</p>
+            <p className="text-yellow-700 mb-4">Your vendor profile is pending admin approval. You'll be able to edit products once approved.</p>
             <Link
               to="/vendor/dashboard"
               className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700"
@@ -304,34 +254,11 @@ export function VendorAddProduct() {
     );
   }
 
-  if (myProductCount >= 2) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navbar />
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-            <h2 className="text-2xl font-bold text-nvm-dark-900 mb-2">Product limit reached</h2>
-            <p className="text-gray-600 mb-6">
-              You can only add <span className="font-semibold">2 products</span> at the moment. Delete a product to add another.
-            </p>
-            <Link
-              to="/vendor/products"
-              className="inline-flex items-center px-6 py-3 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600"
-            >
-              Go to My Products
-            </Link>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -344,13 +271,10 @@ export function VendorAddProduct() {
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Products
           </Link>
-          <h1 className="text-3xl font-display font-bold text-nvm-dark-900 mb-2">
-            Add New Product
-          </h1>
-          <p className="text-gray-600">Fill in the details to list your product</p>
+          <h1 className="text-3xl font-display font-bold text-nvm-dark-900 mb-2">Edit Product</h1>
+          <p className="text-gray-600">Update your product details and save changes</p>
         </motion.div>
 
-        {/* Form */}
         <motion.form
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -358,7 +282,6 @@ export function VendorAddProduct() {
           onSubmit={handleSubmit}
           className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 space-y-6"
         >
-          {/* Product Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Product Name <span className="text-red-500">*</span>
@@ -368,28 +291,22 @@ export function VendorAddProduct() {
               value={formData.name}
               onChange={(e) => handleInputChange('name', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-              placeholder="Enter product name"
               required
             />
           </div>
 
-          {/* Short Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Short Description
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Short Description</label>
             <textarea
               value={formData.shortDescription}
               onChange={(e) => handleInputChange('shortDescription', e.target.value)}
               rows={2}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-              placeholder="Brief description (max 300 characters)"
               maxLength={300}
             />
             <p className="text-xs text-gray-500 mt-1">{formData.shortDescription.length}/300</p>
           </div>
 
-          {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Full Description <span className="text-red-500">*</span>
@@ -399,12 +316,10 @@ export function VendorAddProduct() {
               onChange={(e) => handleInputChange('description', e.target.value)}
               rows={5}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-              placeholder="Detailed product description"
               required
             />
           </div>
 
-          {/* Price and Category */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -419,7 +334,6 @@ export function VendorAddProduct() {
                   value={formData.price}
                   onChange={(e) => handleInputChange('price', e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-                  placeholder="0.00"
                   required
                 />
               </div>
@@ -438,87 +352,64 @@ export function VendorAddProduct() {
                   required
                 >
                   <option value="">Select a category</option>
-                  {(categories.length > 0 ? categories : DEFAULT_CATEGORIES).map((cat: any) => (
-                    <option key={cat._id || cat.slug || cat.name} value={cat._id || cat.slug || cat.name}>
+                  {categories.map((cat: any) => (
+                    <option key={cat._id} value={cat._id}>
                       {cat.name}
                     </option>
                   ))}
                 </select>
               </div>
-              {categories.length === 0 && (
-                <p className="mt-1 text-xs text-gray-500">
-                  Using built-in categories. If product creation fails, the backend may need default categories seeded.
-                </p>
-              )}
             </div>
           </div>
 
-          {/* Product Type and Stock */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Product Type <span className="text-red-500">*</span>
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Product Type</label>
               <select
                 value={formData.productType}
                 onChange={(e) => handleInputChange('productType', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-                required
               >
                 <option value="physical">Physical Product</option>
                 <option value="digital">Digital Product</option>
                 <option value="service">Service</option>
               </select>
             </div>
-
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Stock Quantity
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Stock Quantity</label>
               <input
                 type="number"
                 min="0"
                 value={formData.stock}
                 onChange={(e) => handleInputChange('stock', e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-                placeholder="0"
               />
             </div>
           </div>
 
-          {/* SKU */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              SKU (Optional)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">SKU (Optional)</label>
             <input
               type="text"
               value={formData.sku}
               onChange={(e) => handleInputChange('sku', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-              placeholder="Product SKU"
             />
           </div>
 
-          {/* Product Images */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Product Images <span className="text-red-500">*</span>
             </label>
-            <p className="text-xs text-gray-500 mb-3">Upload images from your device (at least one required, max 5MB each)</p>
-            
-            {/* Image Upload Area */}
+            <p className="text-xs text-gray-500 mb-3">Keep at least one image. You can add new images or remove existing ones.</p>
+
             <div className="mb-4">
               <label className="cursor-pointer">
                 <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-nvm-green-primary hover:bg-nvm-green-50/50 transition-all">
                   <div className="flex flex-col items-center">
                     <Upload className="w-8 h-8 text-gray-400 mb-2" />
-                    <p className="text-sm text-gray-600 text-center">
-                      Click to upload images or drag and drop
-                    </p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      PNG, JPG, GIF up to 5MB each
-                    </p>
+                    <p className="text-sm text-gray-600 text-center">Click to upload images</p>
+                    <p className="text-xs text-gray-500 mt-1">PNG, JPG, GIF up to 5MB each</p>
                   </div>
                   <input
                     type="file"
@@ -531,7 +422,6 @@ export function VendorAddProduct() {
               </label>
             </div>
 
-            {/* Image Previews */}
             {imageFiles.length > 0 && (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 {imageFiles.map((imageFile, index) => (
@@ -550,18 +440,14 @@ export function VendorAddProduct() {
                     >
                       <X className="w-4 h-4" />
                     </button>
-                    <p className="text-xs text-gray-500 mt-1 truncate">{imageFile.file.name}</p>
                   </div>
                 ))}
               </div>
             )}
           </div>
 
-          {/* Tags */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Tags
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Tags</label>
             <input
               type="text"
               onKeyDown={handleTagInput}
@@ -576,11 +462,7 @@ export function VendorAddProduct() {
                     className="inline-flex items-center gap-1 px-3 py-1 bg-nvm-green-100 text-nvm-green-800 rounded-full text-sm"
                   >
                     {tag}
-                    <button
-                      type="button"
-                      onClick={() => removeTag(tag)}
-                      className="hover:text-red-600"
-                    >
+                    <button type="button" onClick={() => removeTag(tag)} className="hover:text-red-600">
                       <X className="w-3 h-3" />
                     </button>
                   </span>
@@ -589,38 +471,6 @@ export function VendorAddProduct() {
             )}
           </div>
 
-          {/* Inventory Settings */}
-          <div className="border-t border-gray-200 pt-6">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Inventory Settings</h3>
-            <div className="space-y-4">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.trackInventory}
-                  onChange={(e) => handleInputChange('trackInventory', e.target.checked)}
-                  className="w-4 h-4 text-nvm-green-primary border-gray-300 rounded focus:ring-nvm-green-primary"
-                />
-                <span className="ml-2 text-sm text-gray-700">Track inventory</span>
-              </label>
-              {formData.trackInventory && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Low Stock Threshold
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    value={formData.lowStockThreshold}
-                    onChange={(e) => handleInputChange('lowStockThreshold', e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-                    placeholder="5"
-                  />
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Submit Buttons */}
           <div className="flex gap-4 pt-6 border-t border-gray-200">
             <button
               type="button"
@@ -634,7 +484,7 @@ export function VendorAddProduct() {
               disabled={submitting}
               className="flex-1 px-6 py-3 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? 'Creating...' : 'Create Product'}
+              {submitting ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </motion.form>
@@ -642,3 +492,4 @@ export function VendorAddProduct() {
     </div>
   );
 }
+

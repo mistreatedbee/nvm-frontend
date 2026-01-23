@@ -11,6 +11,7 @@ import { CustomerDashboard } from './pages/CustomerDashboard';
 import { VendorDashboard } from './pages/VendorDashboard';
 import { VendorProducts } from './pages/VendorProducts';
 import { VendorAddProduct } from './pages/VendorAddProduct';
+import { VendorEditProduct } from './pages/VendorEditProduct';
 import { VendorOrders } from './pages/VendorOrders';
 import { AdminUsers } from './pages/AdminUsers';
 import { Login } from './pages/Login';
@@ -57,6 +58,7 @@ function App() {
         <Route path="/vendor/dashboard" element={<VendorDashboard />} />
         <Route path="/vendor/products" element={<VendorProducts />} />
         <Route path="/vendor/products/new" element={<VendorAddProduct />} />
+        <Route path="/vendor/products/edit/:id" element={<VendorEditProduct />} />
         <Route path="/vendor/orders" element={<VendorOrders />} />
         <Route path="/vendor/analytics" element={<VendorAnalytics />} />
         <Route path="/admin" element={<AdminDashboard />} />
