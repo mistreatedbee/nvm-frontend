@@ -1,43 +1,51 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, Star, Share2, MessageCircle, Store, Mail, Phone } from 'lucide-react';
+import { MapPin, Star, Share2, Store, Mail, Phone, Globe } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { ProductCard } from '../components/ProductCard';
 import { vendorsAPI, productsAPI } from '../lib/api';
 import toast from 'react-hot-toast';
 
 export function VendorStorefront() {
-  const { id } = useParams();
+  const { id, slug } = useParams();
   const navigate = useNavigate();
   const [vendor, setVendor] = useState<any>(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('newest');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
-    if (id) {
-      fetchVendor();
-      fetchProducts();
+    if (slug || id) {
+      fetchVendorAndProducts();
     }
-  }, [id]);
+  }, [slug, id]);
 
-  const fetchVendor = async () => {
+  const fetchVendorAndProducts = async () => {
     try {
-      const response = await vendorsAPI.getById(id!);
-      setVendor(response.data.data);
+      let vendorData: any = null;
+      if (slug) {
+        const profileRes = await vendorsAPI.getPublicProfileBySlug(slug);
+        vendorData = profileRes.data.data;
+      } else if (id) {
+        const legacyRes = await vendorsAPI.getById(id);
+        vendorData = legacyRes.data.data;
+      }
+
+      if (!vendorData) {
+        toast.error('Vendor not found');
+        navigate('/vendors');
+        return;
+      }
+
+      const vendorId = vendorData.vendorId || vendorData._id;
+      const productsRes = await productsAPI.getVendorProducts(vendorId, { limit: 24 });
+      setVendor(vendorData);
+      setProducts(productsRes.data.data || []);
     } catch (error: any) {
       toast.error('Vendor not found');
       navigate('/vendors');
-    }
-  };
-
-  const fetchProducts = async () => {
-    try {
-      const response = await productsAPI.getVendorProducts(id!, { status: 'active' });
-      setProducts(response.data.data || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
     } finally {
       setLoading(false);
     }
@@ -55,6 +63,9 @@ export function VendorStorefront() {
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     }
   });
+  const visibleProducts = sortedProducts.filter((product: any) =>
+    !search.trim() ? true : product.name?.toLowerCase().includes(search.toLowerCase())
+  );
 
   if (loading) {
     return (
@@ -84,9 +95,9 @@ export function VendorStorefront() {
       
       {/* Header Banner */}
       <div className="h-64 md:h-80 bg-gradient-to-br from-nvm-green-primary to-nvm-green-600 relative overflow-hidden">
-        {vendor.banner?.url ? (
+        {vendor.coverImageUrl || vendor.coverImage?.url || vendor.banner?.url ? (
           <img 
-            src={vendor.banner.url} 
+            src={vendor.coverImageUrl || vendor.coverImage?.url || vendor.banner?.url} 
             alt={vendor.storeName}
             className="w-full h-full object-cover"
           />
@@ -104,8 +115,8 @@ export function VendorStorefront() {
           <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8 items-start">
             <div className="flex-shrink-0">
               <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gradient-to-br from-nvm-green-primary to-nvm-gold-primary flex items-center justify-center">
-                {vendor.logo?.url ? (
-                  <img src={vendor.logo.url} alt={vendor.storeName} className="w-full h-full object-cover" />
+                {vendor.profileImageUrl || vendor.profileImage?.url || vendor.logo?.url ? (
+                  <img src={vendor.profileImageUrl || vendor.profileImage?.url || vendor.logo?.url} alt={vendor.storeName} className="w-full h-full object-cover" />
                 ) : (
                   <Store className="w-20 h-20 text-white" />
                 )}
@@ -119,10 +130,10 @@ export function VendorStorefront() {
                     {vendor.storeName}
                   </h1>
                   <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-2">
-                    {vendor.address && (
+                    {(vendor.location || vendor.address) && (
                       <span className="flex items-center">
                         <MapPin className="w-4 h-4 mr-1" />
-                        {vendor.address.city}, {vendor.address.state}
+                        {vendor.location?.city || vendor.address?.city}, {vendor.location?.state || vendor.address?.state}
                       </span>
                     )}
                     {vendor.rating > 0 && (
@@ -150,9 +161,9 @@ export function VendorStorefront() {
                 </div>
               </div>
 
-              {vendor.description && (
+              {(vendor.bio || vendor.description || vendor.about) && (
                 <div className="prose prose-green max-w-none mb-4">
-                  <p className="text-gray-700 leading-relaxed">{vendor.description}</p>
+                  <p className="text-gray-700 leading-relaxed">{vendor.bio || vendor.description || vendor.about}</p>
                 </div>
               )}
 
@@ -170,6 +181,12 @@ export function VendorStorefront() {
                     {vendor.phone}
                   </a>
                 )}
+                {(vendor.website || vendor.socialLinks?.website) && (
+                  <a href={vendor.website || vendor.socialLinks?.website} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-nvm-green-600">
+                    <Globe className="w-4 h-4" />
+                    Website
+                  </a>
+                )}
               </div>
             </div>
           </div>
@@ -182,6 +199,13 @@ export function VendorStorefront() {
         <div className="mb-8 flex items-center justify-between">
           <h2 className="text-2xl font-bold text-nvm-dark-900">Store Products</h2>
           <div className="flex gap-2">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products"
+              className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-nvm-green-primary"
+            />
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -197,8 +221,8 @@ export function VendorStorefront() {
 
         {/* Products Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {sortedProducts.length > 0 ? (
-            sortedProducts.map((product: any, index: number) => (
+          {visibleProducts.length > 0 ? (
+            visibleProducts.map((product: any, index: number) => (
               <ProductCard key={product._id} product={product} index={index} />
             ))
           ) : (

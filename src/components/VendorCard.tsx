@@ -15,6 +15,7 @@ export function VendorCard({
 }: VendorCardProps) {
   // Get vendor ID (support both _id and id)
   const vendorId = vendor._id || vendor.id;
+  const vendorSlug = vendor.usernameSlug || vendor.slug;
   
   // Get vendor name
   const vendorName = vendor.storeName || vendor.name || 'Vendor';
@@ -89,7 +90,7 @@ export function VendorCard({
         </div>
 
         <div className="mt-6">
-          <Link to={`/vendor/${vendorId}`}>
+          <Link to={vendorSlug ? `/vendors/${vendorSlug}` : `/vendor/${vendorId}`}>
             <button className="w-full py-2 border-2 border-nvm-green-primary text-nvm-green-primary rounded-lg font-medium hover:bg-nvm-green-primary hover:text-white transition-all duration-300">
               Visit Store
             </button>

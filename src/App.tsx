@@ -5,6 +5,7 @@ import { MarketplaceHome } from './pages/MarketplaceHome';
 import { AllProducts } from './pages/AllProducts';
 import { AllVendors } from './pages/AllVendors';
 import { VendorStorefront } from './pages/VendorStorefront';
+import { VendorStoreProfile } from './pages/VendorStoreProfile';
 import { ProductDetail } from './pages/ProductDetail';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { CustomerDashboard } from './pages/CustomerDashboard';
@@ -44,6 +45,7 @@ function App() {
         <Route path="/marketplace" element={<AllProducts />} />
         <Route path="/vendors" element={<AllVendors />} />
         <Route path="/vendor/:id" element={<VendorStorefront />} />
+        <Route path="/vendors/:slug" element={<VendorStorefront />} />
         <Route path="/product/:id" element={<ProductDetail />} />
         
         {/* Auth Routes */}
@@ -61,6 +63,7 @@ function App() {
         <Route path="/vendor/products/edit/:id" element={<VendorEditProduct />} />
         <Route path="/vendor/orders" element={<VendorOrders />} />
         <Route path="/vendor/analytics" element={<VendorAnalytics />} />
+        <Route path="/vendor/store-profile" element={<VendorStoreProfile />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />

@@ -65,6 +65,14 @@ export const vendorsAPI = {
   getAdminById: (id: string) => api.get(`/vendors/admin/${id}`),
   getById: (id: string) => api.get(`/vendors/${id}`),
   getBySlug: (slug: string) => api.get(`/vendors/slug/${slug}`),
+  getPublicProfileBySlug: (slug: string) => api.get(`/vendors/${slug}/profile`),
+  getProfileByVendorId: (vendorId: string) => api.get(`/vendors/${vendorId}/profile`),
+  upsertProfile: (vendorId: string, data: any) => api.put(`/vendors/${vendorId}/profile`, data),
+  createProfile: (vendorId: string, data: any) => api.post(`/vendors/${vendorId}/profile`, data),
+  uploadProfileImages: (vendorId: string, formData: FormData) =>
+    api.put(`/vendors/${vendorId}/profile/images`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
   getMyProfile: () => api.get('/vendors/me/profile'),
   update: (id: string, data: any) => api.put(`/vendors/${id}`, data),
   adminUpdateProfile: (id: string, data: any) => api.put(`/vendors/${id}/admin-profile`, data),

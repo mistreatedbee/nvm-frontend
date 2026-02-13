@@ -28,7 +28,8 @@ export function AllVendors() {
 
   const filteredVendors = vendors.filter((vendor: any) => {
     const matchesSearch = vendor.storeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         vendor.description?.toLowerCase().includes(searchTerm.toLowerCase());
+                         vendor.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         vendor.bio?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || vendor.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });

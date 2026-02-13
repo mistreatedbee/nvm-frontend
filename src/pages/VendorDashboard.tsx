@@ -16,7 +16,8 @@ import {
   Edit,
   Eye,
   BarChart3,
-  Star
+  Star,
+  Store
 } from 'lucide-react';
 
 export function VendorDashboard() {
@@ -283,6 +284,19 @@ export function VendorDashboard() {
                   <div className="ml-4 text-left">
                     <p className="font-semibold text-nvm-dark-900">Analytics</p>
                     <p className="text-sm text-gray-500">View insights</p>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/vendor/store-profile"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-teal-400 hover:bg-teal-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center group-hover:bg-teal-500 transition-colors">
+                    <Store className="w-5 h-5 text-teal-600 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">My Store Profile</p>
+                    <p className="text-sm text-gray-500">Edit public storefront</p>
                   </div>
                 </Link>
               </div>
