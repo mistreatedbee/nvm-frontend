@@ -13,6 +13,18 @@ export function VendorCard({
   vendor,
   index
 }: VendorCardProps) {
+  const formatLocation = (locationData: any) => {
+    if (!locationData) return '';
+    if (typeof locationData === 'string') return locationData;
+    if (typeof locationData === 'object') {
+      const city = locationData.city || '';
+      const state = locationData.state || locationData.province || '';
+      const country = locationData.country || '';
+      return [city, state, country].filter(Boolean).join(', ');
+    }
+    return '';
+  };
+
   // Get vendor ID (support both _id and id)
   const vendorId = vendor._id || vendor.id;
   const vendorSlug = vendor.usernameSlug || vendor.slug;
@@ -24,9 +36,10 @@ export function VendorCard({
   const vendorImage = vendor.logo?.url || vendor.image || 'https://via.placeholder.com/150';
   
   // Get location
-  const location = vendor.address 
-    ? `${vendor.address.city || ''}, ${vendor.address.state || ''}`.trim().replace(/^,\s*|,\s*$/g, '')
-    : vendor.location || 'South Africa';
+  const addressLocation = vendor.address
+    ? [vendor.address.city, vendor.address.state, vendor.address.country].filter(Boolean).join(', ')
+    : '';
+  const location = addressLocation || formatLocation(vendor.location) || 'South Africa';
   
   // Get specialty/category
   const specialty = vendor.category || vendor.specialty || 'General';
