@@ -22,17 +22,24 @@ export function MarketplaceHome() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Try to fetch from API, fallback to mock data
+    // Fetch public data for guest/customer browsing.
     const fetchData = async () => {
       try {
-        const [productsRes, vendorsRes] = await Promise.all([
+        const [featuredRes, vendorsRes] = await Promise.all([
           productsAPI.getFeatured(),
           vendorsAPI.getAll({ limit: 4 })
         ]);
-        setApiProducts(productsRes.data.data || []);
+
+        let products = featuredRes.data.data || [];
+        if (products.length === 0) {
+          const fallbackRes = await productsAPI.getAll({ limit: 8, sort: 'popular' });
+          products = fallbackRes.data.data || [];
+        }
+
+        setApiProducts(products);
         setApiVendors(vendorsRes.data.data || []);
       } catch (error) {
-        console.log('Using mock data');
+        console.error('Failed to fetch homepage marketplace data:', error);
       } finally {
         setLoading(false);
       }
