@@ -61,10 +61,24 @@ export const authAPI = {
 export const vendorsAPI = {
   create: (data: any) => api.post('/vendors', data),
   getAll: (params?: any) => api.get('/vendors', { params }),
+  getAdminAll: (params?: any) => api.get('/vendors/admin/all', { params }),
+  getAdminById: (id: string) => api.get(`/vendors/admin/${id}`),
   getById: (id: string) => api.get(`/vendors/${id}`),
   getBySlug: (slug: string) => api.get(`/vendors/slug/${slug}`),
   getMyProfile: () => api.get('/vendors/me/profile'),
   update: (id: string, data: any) => api.put(`/vendors/${id}`, data),
+  adminUpdateProfile: (id: string, data: any) => api.put(`/vendors/${id}/admin-profile`, data),
+  updateStatus: (id: string, data: any) => api.put(`/vendors/${id}/status`, data),
+  uploadDocument: (id: string, formData: FormData) =>
+    api.post(`/vendors/${id}/documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  reviewDocument: (id: string, docId: string, data: any) =>
+    api.put(`/vendors/${id}/documents/${docId}/review`, data),
+  addComplianceCheck: (id: string, data: any) => api.post(`/vendors/${id}/compliance-checks`, data),
+  getDocuments: (id: string, params?: any) => api.get(`/vendors/${id}/documents`, { params }),
+  getActivityLogs: (id: string, params?: any) => api.get(`/vendors/${id}/activity-logs`, { params }),
+  getPerformanceOverview: (id: string) => api.get(`/vendors/${id}/performance`),
   // Vendor analytics is derived from the authenticated vendor; no vendorId is required.
   // Keep vendorId optional for backward compatibility with older call sites.
   getAnalytics: (_vendorId?: string) => api.get(`/analytics/vendor`),
@@ -78,13 +92,17 @@ export const productsAPI = {
   getAll: (params?: any) => api.get('/products', { params }),
   getMyProducts: (params?: any) => api.get('/products/my', { params }),
   getAdminProducts: (params?: any) => api.get('/products/admin', { params }),
+  getReportedProducts: (params?: any) => api.get('/products/admin/reported', { params }),
   getById: (id: string) => api.get(`/products/${id}`),
   getBySlug: (slug: string) => api.get(`/products/slug/${slug}`),
   getVendorProducts: (vendorId: string, params?: any) =>
     api.get(`/products/vendor/${vendorId}`, { params }),
   getFeatured: () => api.get('/products/featured'),
+  getAuditTrail: (id: string, params?: any) => api.get(`/products/${id}/audit`, { params }),
   update: (id: string, data: any) => api.put(`/products/${id}`, data),
   delete: (id: string) => api.delete(`/products/${id}`),
+  report: (id: string, data: any) => api.post(`/products/${id}/report`, data),
+  moderate: (id: string, data: any) => api.put(`/products/${id}/moderate`, data),
 };
 
 // Orders
@@ -132,6 +150,9 @@ export const reviewsAPI = {
   delete: (id: string) => api.delete(`/reviews/${id}`),
   addResponse: (id: string, data: any) => api.put(`/reviews/${id}/response`, data),
   markHelpful: (id: string) => api.put(`/reviews/${id}/helpful`),
+  report: (id: string, data: any) => api.post(`/reviews/${id}/report`, data),
+  getReported: (params?: any) => api.get('/reviews/admin/reported', { params }),
+  moderate: (id: string, data: any) => api.put(`/reviews/${id}/moderate`, data),
 };
 
 // Categories
