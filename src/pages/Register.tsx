@@ -40,12 +40,12 @@ export function Register() {
 
       const { user, token } = response.data;
       setAuth(user, token);
-      toast.success('Account created successfully!');
+      toast.success('Account created. Check your inbox to verify your email.');
 
       if (data.role === 'vendor') {
         navigate('/vendor/setup');
       } else {
-        navigate('/');
+        navigate('/verify-email');
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Registration failed');

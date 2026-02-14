@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Heart, Menu, X, LogOut, MessageSquare } from 'lucide-react';
 import { useAuthStore, useCartStore } from '../lib/store';
 import toast from 'react-hot-toast';
+import { NotificationBell } from './NotificationBell';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,6 +67,7 @@ export function Navbar() {
                     </span>
                   )}
                 </Link>
+                <NotificationBell />
                 <div className="relative group">
                   <button className="flex items-center space-x-2 p-2 rounded-lg hover:bg-gray-100">
                     <div className="w-8 h-8 bg-nvm-green-primary/10 rounded-full flex items-center justify-center">

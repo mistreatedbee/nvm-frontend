@@ -50,9 +50,9 @@ export const authAPI = {
   updateProfile: (data: any) => api.put('/auth/profile', data),
   changePassword: (data: any) => api.put('/auth/change-password', data),
   logout: () => api.post('/auth/logout'),
-  verifyEmail: (token: string) => api.get(`/auth/verify-email/${token}`),
+  verifyEmail: (token: string) => api.post('/auth/verify-email', { token }),
   verifyEmailWithCode: (data: any) => api.post('/auth/verify-email-code', data),
-  resendVerification: () => api.post('/auth/resend-verification'),
+  resendVerification: (email: string) => api.post('/auth/resend-verification', { email }),
   forgotPassword: (data: any) => api.post('/auth/forgot-password', data),
   resetPassword: (token: string, data: any) => api.put(`/auth/reset-password/${token}`, data),
 };
@@ -175,8 +175,9 @@ export const categoriesAPI = {
 // Notifications
 export const notificationsAPI = {
   getAll: (params?: any) => api.get('/notifications', { params }),
-  markAsRead: (id: string) => api.put(`/notifications/${id}/read`),
-  markAllAsRead: () => api.put('/notifications/read-all'),
+  getUnreadCount: () => api.get('/notifications/unread-count'),
+  markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch('/notifications/read-all'),
   delete: (id: string) => api.delete(`/notifications/${id}`),
 };
 

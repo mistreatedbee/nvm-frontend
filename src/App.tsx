@@ -36,6 +36,7 @@ import { OrderInvoice } from './pages/OrderInvoice';
 import { Orders } from './pages/Orders';
 import { ChatInbox } from './pages/ChatInbox';
 import { AdminSupportChats } from './pages/AdminSupportChats';
+import { Notifications } from './pages/Notifications';
 import { ChatFloatingButtons } from './components/chat/ChatFloatingButtons';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
@@ -54,6 +55,7 @@ function App() {
         {/* Auth Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
+        <Route path="/verify-email" element={<EmailVerification />} />
         <Route path="/verify-email/:token" element={<EmailVerification />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
@@ -93,6 +95,7 @@ function App() {
         
         {/* Profile */}
         <Route path="/profile" element={<Profile />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/chat" element={<ChatInbox />} />
         <Route path="/admin/chats" element={<AdminSupportChats />} />
         
