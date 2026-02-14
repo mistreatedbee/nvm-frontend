@@ -34,8 +34,20 @@ export function VendorCard({
   // Get vendor name
   const vendorName = vendor.storeName || vendor.name || 'Vendor';
   
-  // Get vendor image/logo
-  const vendorImage = vendor.logo?.url || vendor.image || 'https://via.placeholder.com/150';
+  // Profile image shown in avatar
+  const profileImage =
+    vendor.profileImageUrl ||
+    vendor.profileImage?.url ||
+    vendor.logo?.url ||
+    vendor.image ||
+    'https://via.placeholder.com/150';
+
+  // Cover image shown in card header
+  const coverImage =
+    vendor.coverImageUrl ||
+    vendor.coverImage?.url ||
+    vendor.banner?.url ||
+    '';
   
   // Get location
   const addressLocation = vendor.address
@@ -68,15 +80,26 @@ export function VendorCard({
       }} 
       className="group relative bg-white rounded-xl overflow-hidden shadow-md hover:shadow-xl transition-shadow duration-300"
     >
-      {/* Pattern Header */}
+      {/* Cover Header */}
       <div className="h-24 bg-nvm-green-primary relative overflow-hidden">
-        <PatternOverlay pattern="kente" color="#D4AF37" opacity={0.2} />
+        {coverImage ? (
+          <>
+            <img
+              src={coverImage}
+              alt={`${vendorName} cover`}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-black/25" />
+          </>
+        ) : (
+          <PatternOverlay pattern="kente" color="#D4AF37" opacity={0.2} />
+        )}
       </div>
 
       {/* Vendor Image */}
       <div className="absolute top-12 left-6">
         <div className="h-24 w-24 rounded-full border-4 border-white overflow-hidden shadow-lg bg-gray-200">
-          <img src={vendorImage} alt={vendorName} className="h-full w-full object-cover" />
+          <img src={profileImage} alt={vendorName} className="h-full w-full object-cover" />
         </div>
       </div>
 
