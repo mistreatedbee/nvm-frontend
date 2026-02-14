@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
-import { Loader2, MessageCircle, Send, Users } from 'lucide-react';
+import { Loader2, MessageCircle, Plus, Send, Users, X } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { chatAPI } from '../lib/api';
 import { connectChatSocket, disconnectChatSocket, getChatSocket } from '../lib/chatSocket';
-import { Conversation, Message } from '../lib/chatTypes';
+import { ChatOrderSuggestion, Conversation, Message } from '../lib/chatTypes';
 import { useAuthStore } from '../lib/store';
 
 function getId(value: any): string | null {
@@ -47,6 +47,12 @@ export function ChatInbox() {
   const [messageInput, setMessageInput] = useState('');
   const [sending, setSending] = useState(false);
   const [typingLabel, setTypingLabel] = useState('');
+  const [newChatOpen, setNewChatOpen] = useState(false);
+  const [creatingChat, setCreatingChat] = useState(false);
+  const [startMode, setStartMode] = useState<'vendor' | 'assistant' | 'admin'>('vendor');
+  const [manualTargetId, setManualTargetId] = useState('');
+  const [starterOrders, setStarterOrders] = useState<ChatOrderSuggestion[]>([]);
+  const [loadingStarters, setLoadingStarters] = useState(false);
 
   const typingTimeoutRef = useRef<number | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
@@ -105,6 +111,91 @@ export function ChatInbox() {
       toast.error(error.response?.data?.message || 'Failed to load conversations');
     } finally {
       setLoadingConversations(false);
+    }
+  };
+
+  const loadStarters = async () => {
+    try {
+      setLoadingStarters(true);
+      const response = await chatAPI.getStarters();
+      setStarterOrders(response.data?.data?.orderSuggestions || []);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to load chat starters');
+    } finally {
+      setLoadingStarters(false);
+    }
+  };
+
+  const createNewConversation = async (suggestion?: ChatOrderSuggestion) => {
+    try {
+      setCreatingChat(true);
+
+      if (startMode === 'assistant') {
+        const response = await chatAPI.createConversation({
+          type: 'support',
+          orderId: suggestion?.orderId,
+          vendorId: suggestion?.vendorId || undefined,
+          forceNew: true
+        });
+        const created = response.data.data as Conversation;
+        setSelectedConversationId(created._id);
+        setNewChatOpen(false);
+        await loadConversations();
+        return;
+      }
+
+      if (startMode === 'admin') {
+        const response = await chatAPI.createConversation({
+          type: 'support',
+          orderId: suggestion?.orderId,
+          forceNew: true
+        });
+        const created = response.data.data as Conversation;
+        setSelectedConversationId(created._id);
+        await chatAPI.escalate({
+          conversationId: created._id,
+          reason: 'User requested admin support from chat dashboard'
+        });
+        setNewChatOpen(false);
+        await loadConversations();
+        return;
+      }
+
+      if (user?.role === 'customer') {
+        const resolvedVendorId = suggestion?.vendorId || manualTargetId.trim();
+        if (!resolvedVendorId) {
+          toast.error('Choose a vendor or enter vendor ID');
+          return;
+        }
+        const response = await chatAPI.createConversation({
+          type: suggestion?.orderId ? 'order' : 'general',
+          vendorId: resolvedVendorId,
+          orderId: suggestion?.orderId
+        });
+        const created = response.data.data as Conversation;
+        setSelectedConversationId(created._id);
+      } else if (user?.role === 'vendor') {
+        const resolvedParticipantId = suggestion?.customerId || manualTargetId.trim();
+        if (!resolvedParticipantId) {
+          toast.error('Choose a customer order or enter customer user ID');
+          return;
+        }
+        const response = await chatAPI.createConversation({
+          type: suggestion?.orderId ? 'order' : 'general',
+          participantId: resolvedParticipantId,
+          orderId: suggestion?.orderId,
+          vendorId: suggestion?.vendorId || undefined
+        });
+        const created = response.data.data as Conversation;
+        setSelectedConversationId(created._id);
+      }
+
+      setNewChatOpen(false);
+      await loadConversations();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Unable to start conversation');
+    } finally {
+      setCreatingChat(false);
     }
   };
 
@@ -171,6 +262,12 @@ export function ChatInbox() {
     if (!selectedConversationId) return;
     loadMessages(true);
   }, [selectedConversationId]);
+
+  useEffect(() => {
+    if (newChatOpen) {
+      loadStarters();
+    }
+  }, [newChatOpen]);
 
   useEffect(() => {
     if (!token) return;
@@ -280,11 +377,20 @@ export function ChatInbox() {
       <div className="max-w-7xl mx-auto p-4 md:p-6">
         <div className="mb-4 flex items-center justify-between">
           <h1 className="text-2xl font-display font-bold text-nvm-dark-900">Messages</h1>
-          {user?.role === 'admin' && (
-            <Link to="/admin/chats" className="text-sm text-nvm-green-primary font-semibold hover:underline">
-              Escalated Support Chats
-            </Link>
-          )}
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setNewChatOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-nvm-green-primary text-white text-sm font-semibold hover:bg-nvm-green-dark transition"
+            >
+              <Plus className="w-4 h-4" />
+              New Chat
+            </button>
+            {user?.role === 'admin' && (
+              <Link to="/admin/chats" className="text-sm text-nvm-green-primary font-semibold hover:underline">
+                Escalated Support Chats
+              </Link>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[calc(100vh-180px)] min-h-[560px]">
@@ -428,6 +534,95 @@ export function ChatInbox() {
           </section>
         </div>
       </div>
+
+      {newChatOpen && (
+        <div className="fixed inset-0 z-[80] bg-black/40 flex items-end md:items-center justify-center p-4">
+          <div className="w-full max-w-2xl bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+              <p className="font-semibold text-gray-900">Start New Conversation</p>
+              <button onClick={() => setNewChatOpen(false)} className="text-gray-500 hover:text-gray-700">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <button
+                  onClick={() => setStartMode('vendor')}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold border ${startMode === 'vendor' ? 'bg-nvm-green-primary text-white border-nvm-green-primary' : 'bg-white text-gray-700 border-gray-300'}`}
+                >
+                  {user?.role === 'vendor' ? 'Chat Customer' : 'Chat Vendor'}
+                </button>
+                <button
+                  onClick={() => setStartMode('assistant')}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold border ${startMode === 'assistant' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-gray-700 border-gray-300'}`}
+                >
+                  Chat AI Assistant
+                </button>
+                <button
+                  onClick={() => setStartMode('admin')}
+                  className={`rounded-lg px-3 py-2 text-sm font-semibold border ${startMode === 'admin' ? 'bg-red-500 text-white border-red-500' : 'bg-white text-gray-700 border-gray-300'}`}
+                >
+                  Chat Admin
+                </button>
+              </div>
+
+              {startMode === 'vendor' && (
+                <div className="space-y-2">
+                  <label className="text-xs font-semibold text-gray-600">
+                    {user?.role === 'vendor' ? 'Customer User ID (optional if selecting order below)' : 'Vendor ID (optional if selecting order below)'}
+                  </label>
+                  <input
+                    value={manualTargetId}
+                    onChange={(e) => setManualTargetId(e.target.value)}
+                    placeholder={user?.role === 'vendor' ? 'Enter customer user id' : 'Enter vendor id'}
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-nvm-green-primary"
+                  />
+                </div>
+              )}
+
+              <div>
+                <p className="text-xs font-semibold text-gray-600 mb-2">Order-aware quick starts</p>
+                <div className="max-h-56 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                  {loadingStarters ? (
+                    <div className="p-3 text-sm text-gray-500">Loading recent orders...</div>
+                  ) : starterOrders.length === 0 ? (
+                    <div className="p-3 text-sm text-gray-500">No recent orders found.</div>
+                  ) : (
+                    starterOrders.map((suggestion) => (
+                      <button
+                        key={`${suggestion.orderId}-${suggestion.vendorId || suggestion.customerId || 'none'}`}
+                        onClick={() => createNewConversation(suggestion)}
+                        className="w-full text-left p-3 hover:bg-gray-50"
+                      >
+                        <p className="text-sm font-semibold text-gray-900">
+                          Order #{suggestion.orderNumber} - {suggestion.orderStatus || 'status unknown'}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {user?.role === 'vendor'
+                            ? `Customer: ${suggestion.customerName || 'N/A'}`
+                            : `Vendor: ${suggestion.vendorName || 'N/A'}`}
+                        </p>
+                      </button>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <button
+                  onClick={() => createNewConversation()}
+                  disabled={creatingChat}
+                  className="inline-flex items-center gap-2 rounded-xl px-4 py-2 bg-nvm-green-primary text-white text-sm font-semibold disabled:opacity-50"
+                >
+                  {creatingChat ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  Start
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

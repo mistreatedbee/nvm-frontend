@@ -36,6 +36,24 @@ export interface Conversation {
   updatedAt?: string;
 }
 
+export interface ChatOrderSuggestion {
+  orderId: string;
+  orderNumber: string;
+  orderStatus?: string;
+  vendorId?: string | null;
+  vendorName?: string | null;
+  customerId?: string | null;
+  customerName?: string | null;
+}
+
+export interface ChatStartersResponse {
+  success: boolean;
+  data: {
+    orderSuggestions: ChatOrderSuggestion[];
+    recentConversations: Conversation[];
+  };
+}
+
 export interface ChatAttachment {
   public_id?: string;
   url?: string;

@@ -81,7 +81,7 @@ export function VendorAssistantModal({ open, onClose }: VendorAssistantModalProp
         <div className="px-4 py-3 bg-gradient-to-r from-nvm-green-primary to-nvm-green-600 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Bot className="w-5 h-5" />
-            <p className="font-semibold">Vendor Assistant</p>
+            <p className="font-semibold">AI Assistant</p>
           </div>
           <button onClick={onClose} className="text-white/90 hover:text-white">
             <XCircle className="w-5 h-5" />
@@ -91,7 +91,7 @@ export function VendorAssistantModal({ open, onClose }: VendorAssistantModalProp
         <div className="h-80 overflow-y-auto p-4 space-y-3 bg-gray-50">
           {entries.length === 0 ? (
             <div className="text-sm text-gray-500 bg-white border border-dashed border-gray-300 rounded-lg p-3">
-              Ask about product uploads, payouts, profile setup, verification, or policy. Unresolved issues are escalated automatically.
+              Ask about orders, products, payments, profiles, or support. Unresolved issues are escalated automatically.
             </div>
           ) : (
             entries.map(entry => (

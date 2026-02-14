@@ -14,9 +14,10 @@ export function ChatFloatingButtons() {
 
   const hide = useMemo(() => {
     if (!isAuthenticated) return true;
+    if (user?.role === 'admin') return true;
     if (location.pathname.startsWith('/chat')) return true;
     return HIDE_ON_PATHS.some(path => location.pathname.startsWith(path));
-  }, [isAuthenticated, location.pathname]);
+  }, [isAuthenticated, user?.role, location.pathname]);
 
   useEffect(() => {
     const handler = () => setAssistantOpen(true);
@@ -31,16 +32,14 @@ export function ChatFloatingButtons() {
   return (
     <>
       <div className="fixed z-50 right-4 bottom-4 md:right-6 md:bottom-6 flex flex-col gap-3">
-        {user?.role === 'vendor' && (
-          <button
-            onClick={() => setAssistantOpen(true)}
-            className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-nvm-gold-primary to-nvm-earth-terracotta text-white px-4 py-3 shadow-xl hover:scale-[1.02] transition"
-            aria-label="Open vendor assistant"
-          >
-            <Bot className="w-5 h-5" />
-            <span className="hidden md:inline text-sm font-semibold">AI Assistant</span>
-          </button>
-        )}
+        <button
+          onClick={() => setAssistantOpen(true)}
+          className="group flex items-center gap-2 rounded-full bg-gradient-to-r from-nvm-gold-primary to-nvm-earth-terracotta text-white px-4 py-3 shadow-xl hover:scale-[1.02] transition"
+          aria-label="Open AI assistant"
+        >
+          <Bot className="w-5 h-5" />
+          <span className="hidden md:inline text-sm font-semibold">AI Assistant</span>
+        </button>
 
         <button
           onClick={() => navigate('/chat')}
@@ -52,9 +51,7 @@ export function ChatFloatingButtons() {
         </button>
       </div>
 
-      {user?.role === 'vendor' && (
-        <VendorAssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} />
-      )}
+      <VendorAssistantModal open={assistantOpen} onClose={() => setAssistantOpen(false)} />
     </>
   );
 }

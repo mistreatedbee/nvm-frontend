@@ -190,6 +190,7 @@ export const paymentsAPI = {
 
 // Chat
 export const chatAPI = {
+  getStarters: () => api.get('/chat/starters'),
   createConversation: (data: any) => api.post('/chat/conversations', data),
   getConversations: (params?: any) => api.get('/chat/conversations', { params }),
   getConversation: (id: string) => api.get(`/chat/conversations/${id}`),
