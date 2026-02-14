@@ -190,12 +190,24 @@ export const paymentsAPI = {
 
 // Chat
 export const chatAPI = {
+  createConversation: (data: any) => api.post('/chat/conversations', data),
+  getConversations: (params?: any) => api.get('/chat/conversations', { params }),
+  getConversation: (id: string) => api.get(`/chat/conversations/${id}`),
+  sendMessage: (data: any) => api.post('/chat/messages', data),
+  getMessages: (params: { conversationId: string; before?: string; limit?: number }) =>
+    api.get('/chat/messages', { params }),
+  markMessageRead: (messageId: string) => api.patch(`/chat/messages/${messageId}/read`),
+  sendBotMessage: (data: any) => api.post('/chat/chatbot/message', data),
+  escalate: (data: any) => api.post('/chat/escalate', data),
+  getAdminEscalatedChats: (params?: any) => api.get('/admin/chats', { params }),
+  updateAdminChatStatus: (conversationId: string, data: any) =>
+    api.patch(`/admin/chats/${conversationId}/status`, data),
+  sendAdminMessage: (conversationId: string, data: any) =>
+    api.post(`/admin/chats/${conversationId}/messages`, data),
+  // Backward compatibility aliases
   createChat: (data: any) => api.post('/chats', data),
   getMyChats: (params?: any) => api.get('/chats', { params }),
   getChat: (id: string) => api.get(`/chats/${id}`),
-  updateStatus: (id: string, data: any) => api.put(`/chats/${id}/status`, data),
-  getUnreadCount: () => api.get('/chats/unread/count'),
-  deleteChat: (id: string) => api.delete(`/chats/${id}`),
 };
 
 // Search & Recommendations
