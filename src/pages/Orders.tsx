@@ -15,7 +15,8 @@ import {
   Truck,
   FileText,
   Eye,
-  MapPin
+  MapPin,
+  MessageSquare
 } from 'lucide-react';
 
 export function Orders() {
@@ -45,6 +46,24 @@ export function Orders() {
   const filteredOrders = orders.filter((order: any) =>
     order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const getUniqueVendors = (order: any) => {
+    const seen = new Set<string>();
+    const unique: Array<{ id: string; name: string }> = [];
+
+    (order.items || []).forEach((item: any) => {
+      const rawVendor = item.vendor;
+      const vendorId = typeof rawVendor === 'string' ? rawVendor : rawVendor?._id;
+      const vendorName = rawVendor?.storeName || `Vendor ${unique.length + 1}`;
+
+      if (vendorId && !seen.has(vendorId)) {
+        seen.add(vendorId);
+        unique.push({ id: vendorId, name: vendorName });
+      }
+    });
+
+    return unique;
+  };
 
   const getStatusColor = (status: string) => {
     const colors: any = {
@@ -176,6 +195,16 @@ export function Orders() {
                       <FileText className="w-4 h-4" />
                       Invoice
                     </Link>
+                    {getUniqueVendors(order).slice(0, 2).map((vendor) => (
+                      <Link
+                        key={vendor.id}
+                        to={`/chat?vendorId=${vendor.id}&orderId=${order._id}&type=order`}
+                        className="flex items-center gap-2 px-4 py-2 bg-nvm-green-primary text-white text-sm rounded-lg hover:bg-nvm-green-dark transition-colors"
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        Chat {vendor.name}
+                      </Link>
+                    ))}
                   </div>
                 </div>
 

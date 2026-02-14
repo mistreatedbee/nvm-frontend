@@ -34,6 +34,9 @@ import { VendorPublicProfile } from './pages/VendorPublicProfile';
 import { Profile } from './pages/Profile';
 import { OrderInvoice } from './pages/OrderInvoice';
 import { Orders } from './pages/Orders';
+import { ChatInbox } from './pages/ChatInbox';
+import { AdminSupportChats } from './pages/AdminSupportChats';
+import { ChatFloatingButtons } from './components/chat/ChatFloatingButtons';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -90,6 +93,8 @@ function App() {
         
         {/* Profile */}
         <Route path="/profile" element={<Profile />} />
+        <Route path="/chat" element={<ChatInbox />} />
+        <Route path="/admin/chats" element={<AdminSupportChats />} />
         
         {/* Fallback route */}
         <Route path="*" element={<MarketplaceHome />} />
@@ -121,6 +126,7 @@ function App() {
           },
         }}
       />
+      <ChatFloatingButtons />
     </Router>
   );
 }

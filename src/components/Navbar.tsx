@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ShoppingCart, User, Heart, Menu, X, LogOut } from 'lucide-react';
+import { ShoppingCart, User, Heart, Menu, X, LogOut, MessageSquare } from 'lucide-react';
 import { useAuthStore, useCartStore } from '../lib/store';
 import toast from 'react-hot-toast';
 
@@ -89,6 +89,14 @@ export function Navbar() {
                     <Link to="/orders" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                       Orders
                     </Link>
+                    <Link to="/chat" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                      Messages
+                    </Link>
+                    {user?.role === 'admin' && (
+                      <Link to="/admin/chats" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                        Support Chats
+                      </Link>
+                    )}
                     <button
                       onClick={handleLogout}
                       className="w-full text-left px-4 py-2 text-red-600 hover:bg-gray-100 flex items-center"
@@ -140,6 +148,10 @@ export function Navbar() {
                 <>
                   <Link to="/cart" className="text-gray-700 hover:text-nvm-green-primary">
                     Cart ({cartItemsCount})
+                  </Link>
+                  <Link to="/chat" className="text-gray-700 hover:text-nvm-green-primary flex items-center gap-2">
+                    <MessageSquare className="w-4 h-4" />
+                    Messages
                   </Link>
                   <Link to="/dashboard" className="text-gray-700 hover:text-nvm-green-primary">
                     Dashboard

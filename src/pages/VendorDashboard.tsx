@@ -17,7 +17,9 @@ import {
   Eye,
   BarChart3,
   Star,
-  Store
+  Store,
+  MessageSquare,
+  Bot
 } from 'lucide-react';
 
 export function VendorDashboard() {
@@ -299,6 +301,32 @@ export function VendorDashboard() {
                     <p className="text-sm text-gray-500">Edit public storefront</p>
                   </div>
                 </Link>
+
+                <Link
+                  to="/chat"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-500 transition-colors">
+                    <MessageSquare className="w-5 h-5 text-blue-600 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">Customer Chats</p>
+                    <p className="text-sm text-gray-500">Order and inquiry messages</p>
+                  </div>
+                </Link>
+
+                <button
+                  onClick={() => window.dispatchEvent(new CustomEvent('nvm:open-assistant'))}
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-amber-500 hover:bg-amber-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center group-hover:bg-amber-500 transition-colors">
+                    <Bot className="w-5 h-5 text-amber-700 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">AI Assistant</p>
+                    <p className="text-sm text-gray-500">Get instant vendor help</p>
+                  </div>
+                </button>
               </div>
             </div>
           </motion.div>

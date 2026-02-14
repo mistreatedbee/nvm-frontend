@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ShoppingBag, Heart, ArrowLeft, Truck, ShieldCheck, Star, Store } from 'lucide-react';
+import { ShoppingBag, Heart, ArrowLeft, Truck, ShieldCheck, Star, Store, MessageSquare } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { ProductReviews } from '../components/ProductReviews';
 import { productsAPI } from '../lib/api';
@@ -239,6 +239,15 @@ export function ProductDetail() {
                   <Heart className={`w-5 h-5 ${isInWishlist(product._id) ? 'fill-current' : ''}`} />
                   {isInWishlist(product._id) ? 'Saved' : 'Save for Later'}
                 </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => navigate(`/chat?vendorId=${product.vendor._id}&type=general`)}
+                    className="flex items-center justify-center gap-2 px-6 py-4 border-2 border-blue-500 text-blue-600 rounded-lg font-semibold hover:bg-blue-50 transition-colors"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                    Chat Vendor
+                  </button>
+                )}
               </div>
             </div>
           </div>

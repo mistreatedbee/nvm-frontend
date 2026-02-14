@@ -15,7 +15,8 @@ import {
   XCircle,
   Clock,
   Store,
-  Shield
+  Shield,
+  MessageCircle
 } from 'lucide-react';
 
 export function AdminDashboard() {
@@ -138,6 +139,13 @@ export function AdminDashboard() {
               >
                 <Package className="w-4 h-4" />
                 Manage Products
+              </Link>
+              <Link
+                to="/admin/chats"
+                className="px-4 py-2 bg-red-50 border-2 border-red-200 text-red-700 rounded-lg hover:border-red-300 hover:bg-red-100 transition-all font-semibold flex items-center gap-2"
+              >
+                <MessageCircle className="w-4 h-4" />
+                Support Chats
               </Link>
             </div>
           </div>

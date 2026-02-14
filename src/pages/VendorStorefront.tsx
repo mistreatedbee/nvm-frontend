@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { MapPin, Star, Share2, Store, Mail, Phone, Globe } from 'lucide-react';
+import { MapPin, Star, Share2, Store, Mail, Phone, Globe, MessageSquare } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { ProductCard } from '../components/ProductCard';
 import { vendorsAPI, productsAPI } from '../lib/api';
+import { useAuthStore } from '../lib/store';
 import toast from 'react-hot-toast';
 
 export function VendorStorefront() {
   const { id, slug } = useParams();
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuthStore();
   const [vendor, setVendor] = useState<any>(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -158,6 +160,14 @@ export function VendorStorefront() {
                   >
                     <Share2 className="w-4 h-4" /> Share
                   </button>
+                  {isAuthenticated && user?.role !== 'vendor' && (
+                    <button
+                      onClick={() => navigate(`/chat?vendorId=${vendor.vendorId || vendor._id}&type=general`)}
+                      className="px-4 py-2 border-2 border-nvm-green-primary text-nvm-green-primary rounded-lg font-medium hover:bg-nvm-green-50 transition-colors flex items-center gap-2"
+                    >
+                      <MessageSquare className="w-4 h-4" /> Chat Vendor
+                    </button>
+                  )}
                 </div>
               </div>
 

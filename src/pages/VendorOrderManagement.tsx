@@ -18,7 +18,8 @@ import {
   Calendar,
   Truck,
   ArrowLeft,
-  Clock
+  Clock,
+  MessageSquare
 } from 'lucide-react';
 
 export function VendorOrderManagement() {
@@ -349,13 +350,24 @@ export function VendorOrderManagement() {
             </div>
 
             {/* Actions */}
-            <button
-              onClick={handleDownloadInvoice}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-colors font-medium"
-            >
-              <Download className="w-5 h-5" />
-              Download Invoice
-            </button>
+            <div className="space-y-3">
+              <button
+                onClick={handleDownloadInvoice}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-colors font-medium"
+              >
+                <Download className="w-5 h-5" />
+                Download Invoice
+              </button>
+              {order.customer?._id && (
+                <button
+                  onClick={() => navigate(`/chat?participantId=${order.customer._id}&orderId=${order._id}&type=order`)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  Chat Customer
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>

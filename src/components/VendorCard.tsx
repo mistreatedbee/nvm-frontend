@@ -1,8 +1,9 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { MapPin, Star } from 'lucide-react';
+import { MapPin, Star, MessageSquare } from 'lucide-react';
 import { PatternOverlay } from './PatternOverlay';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '../lib/store';
 
 interface VendorCardProps {
   vendor: any;
@@ -13,6 +14,7 @@ export function VendorCard({
   vendor,
   index
 }: VendorCardProps) {
+  const { isAuthenticated, user } = useAuthStore();
   const formatLocation = (locationData: any) => {
     if (!locationData) return '';
     if (typeof locationData === 'string') return locationData;
@@ -102,12 +104,20 @@ export function VendorCard({
           {location}
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 space-y-2">
           <Link to={vendorSlug ? `/vendors/${vendorSlug}` : `/vendor/${vendorId}`}>
             <button className="w-full py-2 border-2 border-nvm-green-primary text-nvm-green-primary rounded-lg font-medium hover:bg-nvm-green-primary hover:text-white transition-all duration-300">
               Visit Store
             </button>
           </Link>
+          {isAuthenticated && user?.role !== 'vendor' && (
+            <Link to={`/chat?vendorId=${vendorId}&type=general`}>
+              <button className="w-full py-2 bg-nvm-green-primary text-white rounded-lg font-medium hover:bg-nvm-green-dark transition-all duration-300 inline-flex items-center justify-center gap-2">
+                <MessageSquare className="w-4 h-4" />
+                Chat Vendor
+              </button>
+            </Link>
+          )}
         </div>
       </div>
 

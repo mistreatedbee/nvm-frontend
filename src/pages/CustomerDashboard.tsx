@@ -9,12 +9,12 @@ import {
   Package, 
   Heart, 
   User, 
-  Settings, 
   ShoppingBag, 
   Clock,
   CheckCircle,
   XCircle,
-  TrendingUp
+  TrendingUp,
+  MessageSquare
 } from 'lucide-react';
 
 export function CustomerDashboard() {
@@ -202,15 +202,15 @@ export function CustomerDashboard() {
                 </Link>
 
                 <Link
-                  to="/settings"
+                  to="/chat"
                   className="flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-purple-400 hover:bg-purple-50 transition-all group"
                 >
                   <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-500 transition-colors">
-                    <Settings className="w-5 h-5 text-purple-600 group-hover:text-white" />
+                    <MessageSquare className="w-5 h-5 text-purple-600 group-hover:text-white" />
                   </div>
                   <div className="ml-4">
-                    <p className="font-semibold text-nvm-dark-900">Settings</p>
-                    <p className="text-sm text-gray-500">Account preferences</p>
+                    <p className="font-semibold text-nvm-dark-900">Messages</p>
+                    <p className="text-sm text-gray-500">Chat with vendors</p>
                   </div>
                 </Link>
               </div>

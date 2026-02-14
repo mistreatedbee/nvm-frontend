@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { LoadingScreen } from '../components/LoadingScreen';
 import { ordersAPI, vendorsAPI } from '../lib/api';
@@ -13,7 +14,8 @@ import {
   CheckCircle,
   XCircle,
   Truck,
-  Filter
+  Filter,
+  MessageSquare
 } from 'lucide-react';
 
 export function VendorOrders() {
@@ -229,12 +231,23 @@ export function VendorOrders() {
                   {/* Actions */}
                   {nextStatus && (
                     <div className="border-t border-gray-100 pt-4 mt-4">
-                      <button
-                        onClick={() => handleUpdateOrderStatus(order._id, nextStatus)}
-                        className="w-full md:w-auto px-6 py-2 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-dark transition-colors font-semibold"
-                      >
-                        Mark as {nextStatus}
-                      </button>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => handleUpdateOrderStatus(order._id, nextStatus)}
+                          className="w-full md:w-auto px-6 py-2 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-dark transition-colors font-semibold"
+                        >
+                          Mark as {nextStatus}
+                        </button>
+                        {order.customer?._id && (
+                          <Link
+                            to={`/chat?participantId=${order.customer._id}&orderId=${order._id}&type=order`}
+                            className="w-full md:w-auto inline-flex items-center justify-center gap-2 px-6 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-semibold"
+                          >
+                            <MessageSquare className="w-4 h-4" />
+                            Chat Customer
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   )}
                 </motion.div>
