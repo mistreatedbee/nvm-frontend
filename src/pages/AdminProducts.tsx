@@ -236,7 +236,7 @@ export function AdminProducts() {
               {filteredProducts.map((product: any) => (
                 <motion.div key={product._id} whileHover={{ y: -4 }} className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                   <div className="relative">
-                    <img src={product.images?.[0]?.url || 'https://via.placeholder.com/300'} alt={product.name} className="w-full h-48 object-cover" />
+                    <img src={product.images?.[0]?.url || '/logo.jpeg'} alt={product.name} className="w-full h-48 object-cover" />
                     <span className="absolute top-3 right-3 px-2 py-1 rounded-full text-xs bg-white/90">
                       {product.status}
                     </span>

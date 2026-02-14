@@ -40,7 +40,7 @@ export function VendorCard({
     vendor.profileImage?.url ||
     vendor.logo?.url ||
     vendor.image ||
-    'https://via.placeholder.com/150';
+    '/logo.jpeg';
 
   // Cover image shown in card header
   const coverImage =

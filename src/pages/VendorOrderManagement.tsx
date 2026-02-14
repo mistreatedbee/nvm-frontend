@@ -285,7 +285,7 @@ export function VendorOrderManagement() {
                 {order.items?.map((item: any, index: number) => (
                   <div key={index} className="flex gap-4 border-b border-gray-100 pb-4 last:border-0">
                     <img
-                      src={item.image || 'https://via.placeholder.com/80'}
+                      src={item.image || '/logo.jpeg'}
                       alt={item.name}
                       className="w-20 h-20 object-cover rounded"
                     />

@@ -183,7 +183,7 @@ export function VendorPublicProfile() {
                         className="bg-white border border-gray-200 rounded-xl overflow-hidden hover:shadow-lg transition-all"
                       >
                         <img
-                          src={product.images?.[0]?.url || 'https://via.placeholder.com/300'}
+                          src={product.images?.[0]?.url || '/logo.jpeg'}
                           alt={product.name}
                           className="w-full h-48 object-cover"
                         />
