@@ -48,7 +48,11 @@ export function Register() {
         navigate('/verify-email');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Registration failed');
+      if (error?.code === 'ERR_NETWORK') {
+        toast.error('Cannot reach backend API. Check VITE_API_URL and backend status.');
+      } else {
+        toast.error(error.response?.data?.message || 'Registration failed');
+      }
     } finally {
       setIsLoading(false);
     }

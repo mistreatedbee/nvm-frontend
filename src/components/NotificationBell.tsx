@@ -32,6 +32,9 @@ export function NotificationBell() {
 
       setNotifications(listRes.data?.data || []);
       setUnreadCount(countRes.data?.unreadCount || 0);
+    } catch (_error) {
+      setNotifications([]);
+      setUnreadCount(0);
     } finally {
       setLoading(false);
     }

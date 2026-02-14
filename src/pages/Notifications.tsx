@@ -24,6 +24,8 @@ export function Notifications() {
       setLoading(true);
       const res = await notificationsAPI.getAll({ page: 1, limit: 100 });
       setItems(res.data?.data || []);
+    } catch (_error) {
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -34,13 +36,21 @@ export function Notifications() {
   }, []);
 
   const markAsRead = async (id: string) => {
-    await notificationsAPI.markAsRead(id);
-    setItems((prev) => prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
+    try {
+      await notificationsAPI.markAsRead(id);
+      setItems((prev) => prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)));
+    } catch (_error) {
+      // noop
+    }
   };
 
   const markAll = async () => {
-    await notificationsAPI.markAllAsRead();
-    setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    try {
+      await notificationsAPI.markAllAsRead();
+      setItems((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    } catch (_error) {
+      // noop
+    }
   };
 
   return (
