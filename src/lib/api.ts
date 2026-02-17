@@ -92,6 +92,26 @@ export const vendorsAPI = {
   getAnalytics: (_vendorId?: string) => api.get(`/analytics/vendor`),
   approve: (id: string) => api.put(`/vendors/${id}/approve`),
   reject: (id: string, data: any) => api.put(`/vendors/${id}/reject`, data),
+  // New vendor-management APIs
+  adminList: (params?: any) => api.get('/admin/vendors', { params }),
+  adminGetById: (vendorId: string) => api.get(`/admin/vendors/${vendorId}`),
+  adminApprove: (vendorId: string) => api.patch(`/admin/vendors/${vendorId}/approve`),
+  adminReject: (vendorId: string, data: { reason: string }) => api.patch(`/admin/vendors/${vendorId}/reject`, data),
+  adminSuspend: (vendorId: string, data: { reason: string }) => api.patch(`/admin/vendors/${vendorId}/suspend`, data),
+  adminUnsuspend: (vendorId: string) => api.patch(`/admin/vendors/${vendorId}/unsuspend`),
+  adminUpdateVendorProfile: (vendorId: string, data: any) => api.patch(`/admin/vendors/${vendorId}/profile`, data),
+  adminGetVendorDocuments: (vendorId: string, params?: any) => api.get(`/admin/vendors/${vendorId}/documents`, { params }),
+  adminApproveDocument: (docId: string) => api.patch(`/admin/documents/${docId}/approve`),
+  adminRejectDocument: (docId: string, data: { note?: string }) => api.patch(`/admin/documents/${docId}/reject`, data),
+  adminGetVendorMetrics: (vendorId: string) => api.get(`/admin/vendors/${vendorId}/metrics`),
+  adminGetAuditLogs: (params?: any) => api.get('/admin/audit-logs', { params }),
+  vendorUploadDocument: (formData: FormData) =>
+    api.post('/vendor/documents', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  vendorGetDocuments: () => api.get('/vendor/documents'),
+  vendorDeleteDocument: (docId: string) => api.delete(`/vendor/documents/${docId}`),
+  vendorGetMetrics: () => api.get('/vendor/metrics'),
 };
 
 // Products

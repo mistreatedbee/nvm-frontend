@@ -1,648 +1,359 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Navbar } from '../components/Navbar';
 import { vendorsAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
-import {
-  Store,
-  Search,
-  Filter,
-  Eye,
-  CheckCircle,
-  XCircle,
-  Save,
-  Shield,
-  FileText,
-  ClipboardCheck,
-  History
-} from 'lucide-react';
 
-type VendorTab = 'profile' | 'documents' | 'compliance' | 'activity';
+type Tab = 'overview' | 'performance' | 'documents' | 'audit';
 
 export function AdminVendorManagement() {
   const [vendors, setVendors] = useState<any[]>([]);
-  const [selectedVendor, setSelectedVendor] = useState<any>(null);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showStatusModal, setShowStatusModal] = useState(false);
-  const [activeTab, setActiveTab] = useState<VendorTab>('profile');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
 
-  const [editForm, setEditForm] = useState<any>({});
-  const [statusForm, setStatusForm] = useState({ accountStatus: 'active', reason: '' });
-  const [complianceForm, setComplianceForm] = useState({
-    checkType: 'kyc',
-    status: 'pending',
-    notes: '',
-    nextReviewAt: ''
-  });
-  const [documentForm, setDocumentForm] = useState({
-    type: 'business-registration',
-    name: '',
-    url: ''
-  });
+  const [search, setSearch] = useState('');
+  const [status, setStatus] = useState('all');
+  const [verified, setVerified] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [limit] = useState(10);
+
+  const [selectedVendor, setSelectedVendor] = useState<any>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<Tab>('overview');
+  const [metrics, setMetrics] = useState<any>(null);
   const [documents, setDocuments] = useState<any[]>([]);
-  const [documentPages, setDocumentPages] = useState(1);
-  const [activityLogs, setActivityLogs] = useState<any[]>([]);
-  const [activityPage, setActivityPage] = useState(1);
-  const [activityPages, setActivityPages] = useState(1);
-  const [activityLimit] = useState(5);
-  const [documentPage, setDocumentPage] = useState(1);
-  const [documentLimit] = useState(5);
-  const [performance, setPerformance] = useState<any>(null);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [profileForm, setProfileForm] = useState<any>({});
+
+  const [docPage, setDocPage] = useState(1);
+  const [docPages, setDocPages] = useState(1);
+  const [auditPage, setAuditPage] = useState(1);
+  const [auditPages, setAuditPages] = useState(1);
+
+  const queryParams = useMemo(() => {
+    const params: any = { page, limit };
+    if (status !== 'all') params.status = status;
+    if (verified !== 'all') params.verified = verified;
+    if (search.trim()) params.q = search.trim();
+    return params;
+  }, [page, limit, status, verified, search]);
 
   useEffect(() => {
     fetchVendors();
-  }, [filterStatus]);
+  }, [queryParams]);
 
   const fetchVendors = async () => {
+    setLoading(true);
     try {
-      const params: any = {};
-      if (filterStatus !== 'all') params.status = filterStatus;
-      const response = await vendorsAPI.getAdminAll(params);
-      setVendors(response.data.data || []);
-    } catch (error) {
-      console.error('Error fetching vendors:', error);
-      toast.error('Failed to fetch vendors');
+      const res = await vendorsAPI.adminList(queryParams);
+      setVendors(res.data.data || []);
+      setPages(res.data.pages || 1);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to load vendors');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadActivityLogs = async (vendorId: string, page = 1) => {
-    const logsRes = await vendorsAPI.getActivityLogs(vendorId, { page, limit: activityLimit });
-    setActivityLogs(logsRes.data.data || []);
-    setActivityPage(logsRes.data.currentPage || 1);
-    setActivityPages(logsRes.data.pages || 1);
+  const loadVendorDocuments = async (vendorId: string, pageNumber = 1) => {
+    const res = await vendorsAPI.adminGetVendorDocuments(vendorId, { page: pageNumber, limit: 10 });
+    setDocuments(res.data.data || []);
+    setDocPage(res.data.page || 1);
+    setDocPages(res.data.pages || 1);
   };
 
-  const loadVendorDocuments = async (vendorId: string, page = 1) => {
-    const docsRes = await vendorsAPI.getDocuments(vendorId, { page, limit: documentLimit });
-    setDocuments(docsRes.data.data || []);
-    setDocumentPage(docsRes.data.currentPage || 1);
-    setDocumentPages(docsRes.data.pages || 1);
+  const loadVendorAudit = async (vendorId: string, pageNumber = 1) => {
+    const res = await vendorsAPI.adminGetAuditLogs({ vendorId, page: pageNumber, limit: 20 });
+    setAuditLogs(res.data.data || []);
+    setAuditPage(res.data.page || 1);
+    setAuditPages(res.data.pages || 1);
   };
 
-  const openVendorDetails = async (vendorId: string) => {
+  const openDetails = async (vendorId: string) => {
+    setDetailsOpen(true);
+    setDetailsLoading(true);
+    setActiveTab('overview');
     try {
-      const [vendorRes, perfRes] = await Promise.all([
-        vendorsAPI.getAdminById(vendorId),
-        vendorsAPI.getPerformanceOverview(vendorId)
+      const [vendorRes, metricsRes] = await Promise.all([
+        vendorsAPI.adminGetById(vendorId),
+        vendorsAPI.adminGetVendorMetrics(vendorId)
       ]);
 
       const vendor = vendorRes.data.data;
       setSelectedVendor(vendor);
-      setEditForm({
+      setMetrics(metricsRes.data.data);
+      setProfileForm({
         storeName: vendor.storeName || '',
-        description: vendor.description || '',
         email: vendor.email || '',
         phone: vendor.phone || '',
-        website: vendor.website || '',
-        category: vendor.category || 'other',
-        businessType: vendor.businessType || 'individual',
-        address: {
-          street: vendor.address?.street || '',
-          city: vendor.address?.city || '',
-          state: vendor.address?.state || '',
-          country: vendor.address?.country || '',
-          zipCode: vendor.address?.zipCode || ''
-        }
+        location: vendor.location || {},
+        description: vendor.description || ''
       });
-      setStatusForm({
-        accountStatus: vendor.accountStatus || 'pending',
-        reason: ''
-      });
-      setPerformance(perfRes.data.data || null);
-      setDocumentPage(1);
-      setDocuments([]);
-      setActiveTab('profile');
-      setShowDetailsModal(true);
-      await Promise.all([
-        loadActivityLogs(vendorId, 1),
-        loadVendorDocuments(vendorId, 1)
-      ]);
-    } catch (error) {
-      toast.error('Failed to load vendor details');
+
+      await Promise.all([loadVendorDocuments(vendorId, 1), loadVendorAudit(vendorId, 1)]);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to load vendor details');
+      setDetailsOpen(false);
+    } finally {
+      setDetailsLoading(false);
     }
   };
 
   const refreshSelectedVendor = async () => {
     if (!selectedVendor?._id) return;
-    await openVendorDetails(selectedVendor._id);
+    await openDetails(selectedVendor._id);
+    await fetchVendors();
   };
 
-  useEffect(() => {
-    if (showDetailsModal && selectedVendor?._id && activeTab === 'activity') {
-      loadActivityLogs(selectedVendor._id, activityPage).catch(() => {
-        toast.error('Failed to load activity logs');
-      });
-    }
-  }, [activityPage, activeTab, showDetailsModal]);
-
-  useEffect(() => {
-    if (showDetailsModal && selectedVendor?._id && activeTab === 'documents') {
-      loadVendorDocuments(selectedVendor._id, documentPage).catch(() => {
-        toast.error('Failed to load vendor documents');
-      });
-    }
-  }, [documentPage, activeTab, showDetailsModal]);
-
-  const handleApprove = async (vendorId: string, vendorName: string) => {
-    if (!confirm(`Approve ${vendorName}?`)) return;
+  const applyAction = async (run: () => Promise<any>, successMessage: string) => {
+    setActionLoading(true);
     try {
-      toast.loading('Approving vendor...');
-      await vendorsAPI.approve(vendorId);
-      toast.dismiss();
-      toast.success('Vendor approved successfully');
-      fetchVendors();
-      if (selectedVendor?._id === vendorId) await refreshSelectedVendor();
+      await run();
+      toast.success(successMessage);
+      await refreshSelectedVendor();
     } catch (error: any) {
-      toast.dismiss();
-      toast.error(error.response?.data?.message || 'Failed to approve vendor');
+      toast.error(error.response?.data?.message || 'Action failed');
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleReject = async (vendorId: string, vendorName: string) => {
-    const reason = prompt(`Enter rejection reason for ${vendorName}:`);
+  const handleApprove = (vendorId: string) =>
+    applyAction(() => vendorsAPI.adminApprove(vendorId), 'Vendor approved');
+
+  const handleReject = (vendorId: string) => {
+    const reason = prompt('Rejection reason:');
     if (!reason) return;
-    try {
-      toast.loading('Rejecting vendor...');
-      await vendorsAPI.reject(vendorId, { reason });
-      toast.dismiss();
-      toast.success('Vendor rejected');
-      fetchVendors();
-      if (selectedVendor?._id === vendorId) await refreshSelectedVendor();
-    } catch (error: any) {
-      toast.dismiss();
-      toast.error(error.response?.data?.message || 'Failed to reject vendor');
-    }
+    applyAction(() => vendorsAPI.adminReject(vendorId, { reason }), 'Vendor rejected');
   };
 
-  const handleSaveVendorProfile = async () => {
+  const handleSuspend = (vendorId: string) => {
+    const reason = prompt('Suspension reason:');
+    if (!reason) return;
+    applyAction(() => vendorsAPI.adminSuspend(vendorId, { reason }), 'Vendor suspended');
+  };
+
+  const handleUnsuspend = (vendorId: string) =>
+    applyAction(() => vendorsAPI.adminUnsuspend(vendorId), 'Vendor unsuspended');
+
+  const handleSaveProfile = () => {
     if (!selectedVendor?._id) return;
-    try {
-      toast.loading('Saving vendor profile...');
-      await vendorsAPI.adminUpdateProfile(selectedVendor._id, editForm);
-      toast.dismiss();
-      toast.success('Vendor profile updated');
-      fetchVendors();
-      await refreshSelectedVendor();
-    } catch (error: any) {
-      toast.dismiss();
-      toast.error(error.response?.data?.message || 'Failed to update vendor profile');
-    }
+    applyAction(
+      () => vendorsAPI.adminUpdateVendorProfile(selectedVendor._id, profileForm),
+      'Vendor profile updated'
+    );
   };
 
-  const handleStatusChange = async () => {
-    if (!selectedVendor?._id) return;
-    try {
-      toast.loading('Updating status...');
-      await vendorsAPI.updateStatus(selectedVendor._id, statusForm);
-      toast.dismiss();
-      toast.success('Vendor status updated');
-      setShowStatusModal(false);
-      fetchVendors();
-      await refreshSelectedVendor();
-    } catch (error: any) {
-      toast.dismiss();
-      toast.error(error.response?.data?.message || 'Failed to update status');
-    }
+  const handleDocApprove = (docId: string) =>
+    applyAction(() => vendorsAPI.adminApproveDocument(docId), 'Document approved');
+
+  const handleDocReject = (docId: string) => {
+    const note = prompt('Rejection note (optional):') || '';
+    applyAction(() => vendorsAPI.adminRejectDocument(docId, { note }), 'Document rejected');
   };
-
-  const handleUploadDocumentByUrl = async () => {
-    if (!selectedVendor?._id) return;
-    if (!documentForm.name || !documentForm.url) {
-      toast.error('Document name and URL are required');
-      return;
-    }
-    try {
-      toast.loading('Uploading document...');
-      const formData = new FormData();
-      formData.append('type', documentForm.type);
-      formData.append('name', documentForm.name);
-      formData.append('url', documentForm.url);
-      await vendorsAPI.uploadDocument(selectedVendor._id, formData);
-      toast.dismiss();
-      toast.success('Document uploaded');
-      setDocumentForm({ type: 'business-registration', name: '', url: '' });
-      await loadVendorDocuments(selectedVendor._id, documentPage);
-    } catch (error: any) {
-      toast.dismiss();
-      toast.error(error.response?.data?.message || 'Failed to upload document');
-    }
-  };
-
-  const handleReviewDocument = async (docId: string, action: 'verify' | 'reject') => {
-    if (!selectedVendor?._id) return;
-    const reason = action === 'reject' ? prompt('Enter rejection reason:') : '';
-    if (action === 'reject' && !reason) return;
-    try {
-      toast.loading('Reviewing document...');
-      await vendorsAPI.reviewDocument(selectedVendor._id, docId, { action, reason });
-      toast.dismiss();
-      toast.success(`Document ${action === 'verify' ? 'verified' : 'rejected'}`);
-      await loadVendorDocuments(selectedVendor._id, documentPage);
-    } catch (error: any) {
-      toast.dismiss();
-      toast.error(error.response?.data?.message || 'Failed to review document');
-    }
-  };
-
-  const handleAddComplianceCheck = async () => {
-    if (!selectedVendor?._id) return;
-    try {
-      toast.loading('Saving compliance check...');
-      await vendorsAPI.addComplianceCheck(selectedVendor._id, complianceForm);
-      toast.dismiss();
-      toast.success('Compliance check added');
-      setComplianceForm({ checkType: 'kyc', status: 'pending', notes: '', nextReviewAt: '' });
-      await refreshSelectedVendor();
-    } catch (error: any) {
-      toast.dismiss();
-      toast.error(error.response?.data?.message || 'Failed to save compliance check');
-    }
-  };
-
-  const filteredVendors = vendors.filter((vendor: any) =>
-    vendor.storeName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    vendor.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const getStatusColor = (status: string) => {
-    const colors: any = {
-      pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      approved: 'bg-green-100 text-green-800 border-green-300',
-      rejected: 'bg-red-100 text-red-800 border-red-300',
-      suspended: 'bg-gray-100 text-gray-800 border-gray-300',
-      active: 'bg-green-100 text-green-800 border-green-300',
-      banned: 'bg-red-100 text-red-800 border-red-300'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  const tabs: { id: VendorTab; label: string; icon: any }[] = [
-    { id: 'profile', label: 'Profile', icon: Store },
-    { id: 'documents', label: 'Documents', icon: FileText },
-    { id: 'compliance', label: 'Compliance', icon: ClipboardCheck },
-    { id: 'activity', label: 'Activity', icon: History }
-  ];
-
-  const paginatedDocuments = documents;
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 bg-nvm-accent-indigo rounded-lg flex items-center justify-center">
-              <Store className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-3xl font-display font-bold text-nvm-dark-900">Vendor Management</h1>
-          </div>
-          <p className="text-gray-600">Admin controls for profile, status, documents, compliance, and activity</p>
-        </motion.div>
+      <div className="max-w-7xl mx-auto p-4 md:p-8">
+        <h1 className="text-2xl font-bold mb-4">Admin Vendor Management</h1>
 
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search vendors..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-              />
-            </div>
-            <div className="relative">
-              <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-              >
-                <option value="all">All Status</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="suspended">Suspended</option>
-              </select>
-            </div>
-          </div>
+        <div className="bg-white rounded-lg border p-4 grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+          <input
+            className="border rounded px-3 py-2"
+            placeholder="Search store/email/phone"
+            value={search}
+            onChange={(e) => {
+              setPage(1);
+              setSearch(e.target.value);
+            }}
+          />
+          <select className="border rounded px-3 py-2" value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="all">All Status</option>
+            <option value="PENDING">PENDING</option>
+            <option value="ACTIVE">ACTIVE</option>
+            <option value="SUSPENDED">SUSPENDED</option>
+            <option value="REJECTED">REJECTED</option>
+          </select>
+          <select className="border rounded px-3 py-2" value={verified} onChange={(e) => setVerified(e.target.value)}>
+            <option value="all">All Verification</option>
+            <option value="UNVERIFIED">UNVERIFIED</option>
+            <option value="VERIFIED">VERIFIED</option>
+            <option value="REJECTED">REJECTED</option>
+          </select>
+          <button className="border rounded px-3 py-2 bg-gray-100" onClick={fetchVendors}>Refresh</button>
         </div>
 
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg border overflow-hidden">
           {loading ? (
-            <div className="text-center py-12">Loading vendors...</div>
-          ) : filteredVendors.length === 0 ? (
-            <div className="text-center py-12">No vendors found</div>
+            <div className="p-8 text-center">Loading vendors...</div>
+          ) : vendors.length === 0 ? (
+            <div className="p-8 text-center">No vendors found</div>
           ) : (
-            <div className="divide-y divide-gray-200">
-              {filteredVendors.map((vendor: any) => (
-                <div key={vendor._id} className="p-6 flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold">{vendor.storeName}</h3>
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(vendor.status)}`}>
-                        {vendor.status}
-                      </span>
-                      <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStatusColor(vendor.accountStatus)}`}>
-                        {vendor.accountStatus || 'pending'}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-600">{vendor.email} | {vendor.phone}</p>
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => openVendorDetails(vendor._id)}
-                      className="px-3 py-2 bg-blue-500 text-white rounded-lg text-sm flex items-center gap-2"
-                    >
-                      <Eye className="w-4 h-4" /> Details
-                    </button>
-                    {vendor.status === 'pending' && (
-                      <>
-                        <button onClick={() => handleApprove(vendor._id, vendor.storeName)} className="px-3 py-2 bg-green-500 text-white rounded-lg text-sm">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="text-left p-3">Store/Vendor</th>
+                  <th className="text-left p-3">Email</th>
+                  <th className="text-left p-3">Phone</th>
+                  <th className="text-left p-3">Vendor Status</th>
+                  <th className="text-left p-3">Verification</th>
+                  <th className="text-left p-3">Created</th>
+                  <th className="text-left p-3">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vendors.map((vendor) => (
+                  <tr key={vendor._id} className="border-t">
+                    <td className="p-3">
+                      <div className="font-semibold">{vendor.storeName}</div>
+                      <div className="text-gray-500">{vendor.user?.name || 'N/A'}</div>
+                    </td>
+                    <td className="p-3">{vendor.email || '-'}</td>
+                    <td className="p-3">{vendor.phone || '-'}</td>
+                    <td className="p-3">{vendor.vendorStatus || '-'}</td>
+                    <td className="p-3">{vendor.verificationStatus || '-'}</td>
+                    <td className="p-3">{new Date(vendor.createdAt).toLocaleDateString()}</td>
+                    <td className="p-3">
+                      <div className="flex flex-wrap gap-2">
+                        <button className="px-2 py-1 bg-blue-600 text-white rounded" onClick={() => openDetails(vendor._id)}>
+                          View
+                        </button>
+                        <button className="px-2 py-1 bg-green-600 text-white rounded" onClick={() => handleApprove(vendor._id)}>
                           Approve
                         </button>
-                        <button onClick={() => handleReject(vendor._id, vendor.storeName)} className="px-3 py-2 bg-red-500 text-white rounded-lg text-sm">
+                        <button className="px-2 py-1 bg-red-600 text-white rounded" onClick={() => handleReject(vendor._id)}>
                           Reject
                         </button>
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+                        {(vendor.vendorStatus === 'SUSPENDED') ? (
+                          <button className="px-2 py-1 bg-teal-600 text-white rounded" onClick={() => handleUnsuspend(vendor._id)}>
+                            Unsuspend
+                          </button>
+                        ) : (
+                          <button className="px-2 py-1 bg-amber-600 text-white rounded" onClick={() => handleSuspend(vendor._id)}>
+                            Suspend
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           )}
+        </div>
+
+        <div className="flex items-center justify-between mt-3">
+          <span className="text-sm text-gray-600">Page {page} of {pages}</span>
+          <div className="flex gap-2">
+            <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Prev</button>
+            <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>Next</button>
+          </div>
         </div>
       </div>
 
-      <AnimatePresence>
-        {showDetailsModal && selectedVendor && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 p-4 flex items-center justify-center"
-            onClick={() => setShowDetailsModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-xl w-full max-w-6xl max-h-[92vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="sticky top-0 z-20 bg-white border-b p-4 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold">{selectedVendor.storeName}</h2>
-                  <p className="text-sm text-gray-600">{selectedVendor.email}</p>
+      {detailsOpen && (
+        <div className="fixed inset-0 bg-black/50 z-50 p-4 flex items-center justify-center">
+          <div className="bg-white rounded-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto">
+            <div className="p-4 border-b flex justify-between items-center">
+              <h2 className="text-xl font-bold">{selectedVendor?.storeName || 'Vendor Details'}</h2>
+              <button className="px-3 py-1 border rounded" onClick={() => setDetailsOpen(false)}>Close</button>
+            </div>
+
+            {detailsLoading ? (
+              <div className="p-8 text-center">Loading details...</div>
+            ) : (
+              <div className="p-4">
+                <div className="flex gap-2 mb-4">
+                  <button className={`px-3 py-1 rounded ${activeTab === 'overview' ? 'bg-gray-900 text-white' : 'bg-gray-100'}`} onClick={() => setActiveTab('overview')}>Overview</button>
+                  <button className={`px-3 py-1 rounded ${activeTab === 'performance' ? 'bg-gray-900 text-white' : 'bg-gray-100'}`} onClick={() => setActiveTab('performance')}>Performance</button>
+                  <button className={`px-3 py-1 rounded ${activeTab === 'documents' ? 'bg-gray-900 text-white' : 'bg-gray-100'}`} onClick={() => setActiveTab('documents')}>Documents</button>
+                  <button className={`px-3 py-1 rounded ${activeTab === 'audit' ? 'bg-gray-900 text-white' : 'bg-gray-100'}`} onClick={() => setActiveTab('audit')}>Audit Log</button>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setShowStatusModal(true)}
-                    className="px-3 py-2 bg-amber-500 text-white rounded-lg text-sm flex items-center gap-2"
-                  >
-                    <Shield className="w-4 h-4" /> Change Status
-                  </button>
-                  <button onClick={() => setShowDetailsModal(false)} className="px-3 py-2 bg-gray-100 rounded-lg text-sm">
-                    Close
-                  </button>
-                </div>
-              </div>
 
-              <div className="p-4 border-b flex gap-2 flex-wrap">
-                {tabs.map((tab) => {
-                  const Icon = tab.icon;
-                  return (
-                    <button
-                      key={tab.id}
-                      onClick={() => setActiveTab(tab.id)}
-                      className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 ${activeTab === tab.id ? 'bg-nvm-accent-indigo text-white' : 'bg-gray-100 text-gray-700'}`}
-                    >
-                      <Icon className="w-4 h-4" /> {tab.label}
-                    </button>
-                  );
-                })}
-              </div>
-
-              <div className="p-6">
-                {activeTab === 'profile' && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input className="border rounded-lg p-2" placeholder="Store Name" value={editForm.storeName || ''} onChange={(e) => setEditForm({ ...editForm, storeName: e.target.value })} />
-                      <input className="border rounded-lg p-2" placeholder="Email" value={editForm.email || ''} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
-                      <input className="border rounded-lg p-2" placeholder="Phone" value={editForm.phone || ''} onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })} />
-                      <input className="border rounded-lg p-2" placeholder="Website" value={editForm.website || ''} onChange={(e) => setEditForm({ ...editForm, website: e.target.value })} />
+                {activeTab === 'overview' && (
+                  <div className="space-y-3">
+                    <div className="grid md:grid-cols-2 gap-3">
+                      <input className="border rounded px-3 py-2" placeholder="Store Name" value={profileForm.storeName || ''} onChange={(e) => setProfileForm({ ...profileForm, storeName: e.target.value })} />
+                      <input className="border rounded px-3 py-2" placeholder="Email" value={profileForm.email || ''} onChange={(e) => setProfileForm({ ...profileForm, email: e.target.value })} />
+                      <input className="border rounded px-3 py-2" placeholder="Phone" value={profileForm.phone || ''} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} />
+                      <input className="border rounded px-3 py-2" placeholder="City" value={profileForm.location?.city || ''} onChange={(e) => setProfileForm({ ...profileForm, location: { ...(profileForm.location || {}), city: e.target.value } })} />
                     </div>
-                    <textarea className="border rounded-lg p-2 w-full" rows={4} placeholder="Description" value={editForm.description || ''} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <input className="border rounded-lg p-2" placeholder="Street" value={editForm.address?.street || ''} onChange={(e) => setEditForm({ ...editForm, address: { ...editForm.address, street: e.target.value } })} />
-                      <input className="border rounded-lg p-2" placeholder="City" value={editForm.address?.city || ''} onChange={(e) => setEditForm({ ...editForm, address: { ...editForm.address, city: e.target.value } })} />
-                      <input className="border rounded-lg p-2" placeholder="State" value={editForm.address?.state || ''} onChange={(e) => setEditForm({ ...editForm, address: { ...editForm.address, state: e.target.value } })} />
-                      <input className="border rounded-lg p-2" placeholder="Zip Code" value={editForm.address?.zipCode || ''} onChange={(e) => setEditForm({ ...editForm, address: { ...editForm.address, zipCode: e.target.value } })} />
-                    </div>
-                    <button onClick={handleSaveVendorProfile} className="px-4 py-2 bg-green-600 text-white rounded-lg flex items-center gap-2">
-                      <Save className="w-4 h-4" /> Save Profile Changes
+                    <textarea className="w-full border rounded px-3 py-2" rows={4} placeholder="Description" value={profileForm.description || ''} onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })} />
+                    <button className="px-4 py-2 bg-blue-700 text-white rounded disabled:opacity-60" disabled={actionLoading} onClick={handleSaveProfile}>
+                      {actionLoading ? 'Saving...' : 'Save Profile'}
                     </button>
+                  </div>
+                )}
 
-                    {performance && (
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                        <div className="bg-blue-50 p-3 rounded-lg">
-                          <p className="text-xs text-blue-600">Products</p>
-                          <p className="text-xl font-bold">{performance.metrics?.totalProducts || 0}</p>
-                        </div>
-                        <div className="bg-green-50 p-3 rounded-lg">
-                          <p className="text-xs text-green-600">Orders</p>
-                          <p className="text-xl font-bold">{performance.metrics?.totalOrders || 0}</p>
-                        </div>
-                        <div className="bg-yellow-50 p-3 rounded-lg">
-                          <p className="text-xs text-yellow-700">Revenue</p>
-                          <p className="text-xl font-bold">{formatRands(performance.metrics?.totalRevenue || 0)}</p>
-                        </div>
-                        <div className="bg-purple-50 p-3 rounded-lg">
-                          <p className="text-xs text-purple-700">Avg Rating</p>
-                          <p className="text-xl font-bold">{performance.metrics?.averageRating || 0}</p>
-                        </div>
-                      </div>
-                    )}
+                {activeTab === 'performance' && (
+                  <div className="grid md:grid-cols-4 gap-3">
+                    <div className="border rounded p-3"><p className="text-xs text-gray-500">Total Orders</p><p className="text-xl font-bold">{metrics?.totalOrders || 0}</p></div>
+                    <div className="border rounded p-3"><p className="text-xs text-gray-500">Total Sales</p><p className="text-xl font-bold">{formatRands(metrics?.totalSales || 0)}</p></div>
+                    <div className="border rounded p-3"><p className="text-xs text-gray-500">Total Reviews</p><p className="text-xl font-bold">{metrics?.totalReviews || 0}</p></div>
+                    <div className="border rounded p-3"><p className="text-xs text-gray-500">Avg Rating</p><p className="text-xl font-bold">{metrics?.avgRating || 0}</p></div>
                   </div>
                 )}
 
                 {activeTab === 'documents' && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                      <select className="border rounded-lg p-2" value={documentForm.type} onChange={(e) => setDocumentForm({ ...documentForm, type: e.target.value })}>
-                        <option value="business-registration">Business Registration</option>
-                        <option value="tax-certificate">Tax Certificate</option>
-                        <option value="compliance">Compliance</option>
-                        <option value="identity">Identity</option>
-                        <option value="bank-proof">Bank Proof</option>
-                        <option value="other">Other</option>
-                      </select>
-                      <input className="border rounded-lg p-2" placeholder="Document name" value={documentForm.name} onChange={(e) => setDocumentForm({ ...documentForm, name: e.target.value })} />
-                      <input className="border rounded-lg p-2" placeholder="Document URL" value={documentForm.url} onChange={(e) => setDocumentForm({ ...documentForm, url: e.target.value })} />
-                    </div>
-                    <button onClick={handleUploadDocumentByUrl} className="px-4 py-2 bg-blue-600 text-white rounded-lg">Upload Document</button>
-
-                    <div className="space-y-3">
-                      {paginatedDocuments.map((doc: any) => (
-                        <div key={doc._id} className="border rounded-lg p-3 flex items-center justify-between">
+                  <div className="space-y-3">
+                    {documents.length === 0 ? (
+                      <p className="text-gray-600">No documents</p>
+                    ) : (
+                      documents.map((doc) => (
+                        <div key={doc._id} className="border rounded p-3 flex items-center justify-between gap-3">
                           <div>
-                            <p className="font-semibold">{doc.name}</p>
-                            <p className="text-sm text-gray-600">{doc.type}</p>
-                            <p className={`text-xs font-medium ${doc.status === 'verified' ? 'text-green-700' : doc.status === 'rejected' ? 'text-red-700' : 'text-amber-700'}`}>{doc.status}</p>
+                            <p className="font-semibold">{doc.fileName}</p>
+                            <p className="text-sm text-gray-600">{doc.docType} | {doc.status}</p>
+                            {doc.reviewNote ? <p className="text-sm text-red-700">Note: {doc.reviewNote}</p> : null}
                           </div>
                           <div className="flex gap-2">
-                            <a href={doc.file?.url} target="_blank" rel="noreferrer" className="px-3 py-2 bg-gray-100 rounded-lg text-sm">Open</a>
-                            <button onClick={() => handleReviewDocument(doc._id, 'verify')} className="px-3 py-2 bg-green-600 text-white rounded-lg text-sm">Verify</button>
-                            <button onClick={() => handleReviewDocument(doc._id, 'reject')} className="px-3 py-2 bg-red-600 text-white rounded-lg text-sm">Reject</button>
+                            <a className="px-3 py-1 border rounded" target="_blank" rel="noreferrer" href={doc.fileUrl}>View</a>
+                            <button className="px-3 py-1 bg-green-600 text-white rounded" onClick={() => handleDocApprove(doc._id)}>Approve</button>
+                            <button className="px-3 py-1 bg-red-600 text-white rounded" onClick={() => handleDocReject(doc._id)}>Reject</button>
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600">Page {documentPage} of {documentPages}</p>
-                      <div className="flex gap-2">
-                        <button
-                          disabled={documentPage <= 1}
-                          onClick={() => setDocumentPage((prev) => Math.max(1, prev - 1))}
-                          className="px-3 py-1 bg-gray-100 rounded disabled:opacity-50"
-                        >
-                          Prev
-                        </button>
-                        <button
-                          disabled={documentPage >= documentPages}
-                          onClick={() => setDocumentPage((prev) => Math.min(documentPages, prev + 1))}
-                          className="px-3 py-1 bg-gray-100 rounded disabled:opacity-50"
-                        >
-                          Next
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'compliance' && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <select className="border rounded-lg p-2" value={complianceForm.checkType} onChange={(e) => setComplianceForm({ ...complianceForm, checkType: e.target.value })}>
-                        <option value="kyc">KYC</option>
-                        <option value="business-license">Business License</option>
-                        <option value="tax">Tax</option>
-                        <option value="banking">Banking</option>
-                        <option value="policy">Policy</option>
-                        <option value="other">Other</option>
-                      </select>
-                      <select className="border rounded-lg p-2" value={complianceForm.status} onChange={(e) => setComplianceForm({ ...complianceForm, status: e.target.value })}>
-                        <option value="pending">Pending</option>
-                        <option value="passed">Passed</option>
-                        <option value="failed">Failed</option>
-                      </select>
-                      <input type="date" className="border rounded-lg p-2" value={complianceForm.nextReviewAt} onChange={(e) => setComplianceForm({ ...complianceForm, nextReviewAt: e.target.value })} />
-                      <input className="border rounded-lg p-2" placeholder="Notes" value={complianceForm.notes} onChange={(e) => setComplianceForm({ ...complianceForm, notes: e.target.value })} />
-                    </div>
-                    <button onClick={handleAddComplianceCheck} className="px-4 py-2 bg-indigo-600 text-white rounded-lg">Add Compliance Check</button>
-                    <div className="space-y-2">
-                      {(selectedVendor.complianceChecks || []).map((check: any) => (
-                        <div key={check._id} className="border rounded-lg p-3">
-                          <p className="font-semibold">{check.checkType}</p>
-                          <p className="text-sm text-gray-600">{check.notes || 'No notes'}</p>
-                          <p className="text-xs text-gray-500">Status: {check.status}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {activeTab === 'activity' && (
-                  <div className="space-y-2">
-                    {activityLogs.length === 0 ? (
-                      <p className="text-gray-600">No activity logs</p>
-                    ) : (
-                      activityLogs.map((log: any) => (
-                        <div key={log._id} className="border rounded-lg p-3">
-                          <p className="font-semibold">{log.action}</p>
-                          <p className="text-sm text-gray-600">{log.message || 'No message'}</p>
-                          <p className="text-xs text-gray-500">{new Date(log.createdAt).toLocaleString()}</p>
                         </div>
                       ))
                     )}
-                    <div className="flex items-center justify-between pt-2">
-                      <p className="text-sm text-gray-600">Page {activityPage} of {activityPages}</p>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Page {docPage} of {docPages}</span>
                       <div className="flex gap-2">
-                        <button
-                          disabled={activityPage <= 1}
-                          onClick={() => setActivityPage((prev) => Math.max(1, prev - 1))}
-                          className="px-3 py-1 bg-gray-100 rounded disabled:opacity-50"
-                        >
-                          Prev
-                        </button>
-                        <button
-                          disabled={activityPage >= activityPages}
-                          onClick={() => setActivityPage((prev) => Math.min(activityPages, prev + 1))}
-                          className="px-3 py-1 bg-gray-100 rounded disabled:opacity-50"
-                        >
-                          Next
-                        </button>
+                        <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={docPage <= 1} onClick={async () => selectedVendor?._id && loadVendorDocuments(selectedVendor._id, docPage - 1)}>Prev</button>
+                        <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={docPage >= docPages} onClick={async () => selectedVendor?._id && loadVendorDocuments(selectedVendor._id, docPage + 1)}>Next</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'audit' && (
+                  <div className="space-y-2">
+                    {auditLogs.length === 0 ? (
+                      <p className="text-gray-600">No audit logs</p>
+                    ) : (
+                      auditLogs.map((log) => (
+                        <div key={log._id} className="border rounded p-3">
+                          <p className="font-semibold">{log.actionType || log.action}</p>
+                          <p className="text-sm text-gray-600">{new Date(log.createdAt).toLocaleString()}</p>
+                          {log.metadata ? <pre className="text-xs mt-2 bg-gray-50 p-2 rounded overflow-auto">{JSON.stringify(log.metadata, null, 2)}</pre> : null}
+                        </div>
+                      ))
+                    )}
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Page {auditPage} of {auditPages}</span>
+                      <div className="flex gap-2">
+                        <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={auditPage <= 1} onClick={async () => selectedVendor?._id && loadVendorAudit(selectedVendor._id, auditPage - 1)}>Prev</button>
+                        <button className="px-3 py-1 border rounded disabled:opacity-50" disabled={auditPage >= auditPages} onClick={async () => selectedVendor?._id && loadVendorAudit(selectedVendor._id, auditPage + 1)}>Next</button>
                       </div>
                     </div>
                   </div>
                 )}
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {showStatusModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4"
-            onClick={() => setShowStatusModal(false)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white rounded-xl w-full max-w-lg p-6"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <h3 className="text-xl font-bold mb-4">Change Vendor Account Status</h3>
-              <div className="space-y-3">
-                <select
-                  className="w-full border rounded-lg p-2"
-                  value={statusForm.accountStatus}
-                  onChange={(e) => setStatusForm({ ...statusForm, accountStatus: e.target.value })}
-                >
-                  <option value="active">Active</option>
-                  <option value="pending">Pending</option>
-                  <option value="suspended">Suspended</option>
-                  <option value="banned">Banned</option>
-                </select>
-                <textarea
-                  className="w-full border rounded-lg p-2"
-                  rows={4}
-                  placeholder="Reason (optional)"
-                  value={statusForm.reason}
-                  onChange={(e) => setStatusForm({ ...statusForm, reason: e.target.value })}
-                />
-              </div>
-              <div className="flex justify-end gap-2 mt-4">
-                <button onClick={() => setShowStatusModal(false)} className="px-4 py-2 bg-gray-100 rounded-lg">Cancel</button>
-                <button onClick={handleStatusChange} className="px-4 py-2 bg-amber-600 text-white rounded-lg">Apply</button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

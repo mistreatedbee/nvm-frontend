@@ -303,6 +303,19 @@ export function VendorDashboard() {
                 </Link>
 
                 <Link
+                  to="/vendor/documents"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-rose-400 hover:bg-rose-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-rose-100 rounded-lg flex items-center justify-center group-hover:bg-rose-500 transition-colors">
+                    <Store className="w-5 h-5 text-rose-600 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">Verification Docs</p>
+                    <p className="text-sm text-gray-500">Upload and track compliance</p>
+                  </div>
+                </Link>
+
+                <Link
                   to="/chat"
                   className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-blue-500 hover:bg-blue-50 transition-all group"
                 >

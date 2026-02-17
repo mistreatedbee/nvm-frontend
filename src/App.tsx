@@ -28,6 +28,7 @@ import { AdminProducts } from './pages/AdminProducts';
 import { AdminVendorManagement } from './pages/AdminVendorManagement';
 import { VendorRegistration } from './pages/VendorRegistration';
 import { VendorApprovalStatus } from './pages/VendorApprovalStatus';
+import { VendorDocuments } from './pages/VendorDocuments';
 import { OrderTracking } from './pages/OrderTracking';
 import { VendorOrderManagement } from './pages/VendorOrderManagement';
 import { VendorPublicProfile } from './pages/VendorPublicProfile';
@@ -78,6 +79,7 @@ function App() {
         {/* Vendor Routes */}
         <Route path="/vendor/register" element={<VendorRegistration />} />
         <Route path="/vendor/approval-status" element={<VendorApprovalStatus />} />
+        <Route path="/vendor/documents" element={<VendorDocuments />} />
         <Route path="/vendor/orders/:orderId" element={<VendorOrderManagement />} />
         
         {/* Public Vendor Profile */}
