@@ -3,10 +3,12 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Bell, CheckCheck, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { notificationsAPI } from '../lib/api';
+import { useAuthStore } from '../lib/store';
 
 interface AppNotification {
   _id: string;
-  type: 'ORDER' | 'APPROVAL' | 'ACCOUNT' | 'CHAT_ESCALATION' | 'SYSTEM' | 'PAYOUT' | 'REVIEW' | 'SECURITY';
+  type: 'ORDER' | 'VENDOR_APPROVAL' | 'ACCOUNT_STATUS' | 'SYSTEM';
+  subType?: string;
   title: string;
   message: string;
   linkUrl?: string;
@@ -17,12 +19,18 @@ interface AppNotification {
 const POLL_MS = 30000;
 
 export function NotificationBell() {
+  const { isAuthenticated } = useAuthStore();
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
   const loadNotifications = async () => {
+    if (!isAuthenticated) {
+      setNotifications([]);
+      setUnreadCount(0);
+      return;
+    }
     try {
       setLoading(true);
       const [listRes, countRes] = await Promise.all([
@@ -41,10 +49,11 @@ export function NotificationBell() {
   };
 
   useEffect(() => {
+    if (!isAuthenticated) return;
     loadNotifications();
     const timer = setInterval(loadNotifications, POLL_MS);
     return () => clearInterval(timer);
-  }, []);
+  }, [isAuthenticated]);
 
   const sorted = useMemo(
     () => [...notifications].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()),
@@ -104,6 +113,7 @@ export function NotificationBell() {
     <div className="relative">
       <button
         onClick={() => setShowDropdown((prev) => !prev)}
+        disabled={!isAuthenticated}
         className="relative p-2 rounded-lg hover:bg-gray-100 transition-colors"
         aria-label="Notifications"
       >

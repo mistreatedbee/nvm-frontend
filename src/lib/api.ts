@@ -255,6 +255,15 @@ export const notificationsAPI = {
   markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
   markAllAsRead: () => api.patch('/notifications/read-all'),
   delete: (id: string) => api.delete(`/notifications/${id}`),
+  adminBroadcast: (data: {
+    roles: Array<'CUSTOMER' | 'VENDOR' | 'ADMIN'>;
+    title: string;
+    message: string;
+    linkUrl?: string;
+    type?: 'ORDER' | 'VENDOR_APPROVAL' | 'ACCOUNT_STATUS' | 'SYSTEM';
+    subType?: string;
+    metadata?: any;
+  }) => api.post('/admin/notifications/broadcast', data),
 };
 
 // Payments
