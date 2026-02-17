@@ -343,3 +343,36 @@ export const usersAPI = {
   delete: (id: string) => api.delete(`/users/${id}`),
   getStats: () => api.get('/users/stats'),
 };
+
+// Knowledge Hub (Vendor/Public)
+export const knowledgeAPI = {
+  getArticles: (params?: any) => api.get('/knowledge/articles', { params }),
+  getArticleBySlug: (slug: string) => api.get(`/knowledge/articles/${slug}`),
+  getResources: (params?: any) => api.get('/knowledge/resources', { params }),
+  getResourceBySlug: (slug: string) => api.get(`/knowledge/resources/${slug}`),
+  trackView: (data: { contentType: 'ARTICLE' | 'RESOURCE'; contentId: string; sessionId?: string }) =>
+    api.post('/knowledge/track-view', data),
+};
+
+// Knowledge Hub (Admin)
+export const adminKnowledgeAPI = {
+  listArticles: (params?: any) => api.get('/admin/knowledge/articles', { params }),
+  createArticle: (data: any) => api.post('/admin/knowledge/articles', data),
+  updateArticle: (id: string, data: any) => api.put(`/admin/knowledge/articles/${id}`, data),
+  publishArticle: (id: string) => api.patch(`/admin/knowledge/articles/${id}/publish`),
+  unpublishArticle: (id: string, data?: { status?: 'DRAFT' | 'ARCHIVED' }) =>
+    api.patch(`/admin/knowledge/articles/${id}/unpublish`, data || {}),
+  deleteArticle: (id: string) => api.delete(`/admin/knowledge/articles/${id}`),
+  listResources: (params?: any) => api.get('/admin/knowledge/resources', { params }),
+  createResource: (data: any) => api.post('/admin/knowledge/resources', data),
+  updateResource: (id: string, data: any) => api.put(`/admin/knowledge/resources/${id}`, data),
+  publishResource: (id: string) => api.patch(`/admin/knowledge/resources/${id}/publish`),
+  unpublishResource: (id: string, data?: { status?: 'DRAFT' | 'ARCHIVED' }) =>
+    api.patch(`/admin/knowledge/resources/${id}/unpublish`, data || {}),
+  deleteResource: (id: string) => api.delete(`/admin/knowledge/resources/${id}`),
+  uploadResourceFile: (formData: FormData) =>
+    api.post('/admin/knowledge/resources/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  getAnalytics: (params?: any) => api.get('/admin/knowledge/analytics', { params }),
+};

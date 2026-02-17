@@ -17,7 +17,8 @@ import {
   Store,
   Shield,
   MessageCircle,
-  Star
+  Star,
+  BookOpen
 } from 'lucide-react';
 
 export function AdminDashboard() {
@@ -154,6 +155,13 @@ export function AdminDashboard() {
               >
                 <Star className="w-4 h-4" />
                 Moderate Reviews
+              </Link>
+              <Link
+                to="/admin/knowledge"
+                className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary transition-all font-semibold flex items-center gap-2"
+              >
+                <BookOpen className="w-4 h-4" />
+                Knowledge Hub
               </Link>
               <Link
                 to="/admin/chats"

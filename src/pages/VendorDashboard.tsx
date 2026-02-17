@@ -19,7 +19,8 @@ import {
   Star,
   Store,
   MessageSquare,
-  Bot
+  Bot,
+  BookOpen
 } from 'lucide-react';
 
 export function VendorDashboard() {
@@ -286,6 +287,19 @@ export function VendorDashboard() {
                   <div className="ml-4 text-left">
                     <p className="font-semibold text-nvm-dark-900">Analytics</p>
                     <p className="text-sm text-gray-500">View insights</p>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/vendor/knowledge"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-cyan-400 hover:bg-cyan-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-cyan-100 rounded-lg flex items-center justify-center group-hover:bg-cyan-500 transition-colors">
+                    <BookOpen className="w-5 h-5 text-cyan-600 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">Knowledge Hub</p>
+                    <p className="text-sm text-gray-500">Guides and resources</p>
                   </div>
                 </Link>
 

@@ -45,6 +45,11 @@ import { VendorInvoices } from './pages/VendorInvoices';
 import { VendorTransactions } from './pages/VendorTransactions';
 import { AdminInvoices } from './pages/AdminInvoices';
 import { AdminReviews } from './pages/AdminReviews';
+import { KnowledgeHubHome } from './pages/KnowledgeHubHome';
+import { KnowledgeArticlesPage } from './pages/KnowledgeArticlesPage';
+import { KnowledgeArticleDetailPage } from './pages/KnowledgeArticleDetailPage';
+import { KnowledgeResourcesPage } from './pages/KnowledgeResourcesPage';
+import { AdminKnowledgeHub } from './pages/AdminKnowledgeHub';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -76,8 +81,13 @@ function App() {
         <Route path="/vendor/orders" element={<VendorOrders />} />
         <Route path="/vendor/analytics" element={<VendorAnalytics />} />
         <Route path="/vendor/store-profile" element={<VendorStoreProfile />} />
+        <Route path="/vendor/knowledge" element={<KnowledgeHubHome />} />
+        <Route path="/vendor/knowledge/articles" element={<KnowledgeArticlesPage />} />
+        <Route path="/vendor/knowledge/articles/:slug" element={<KnowledgeArticleDetailPage />} />
+        <Route path="/vendor/knowledge/resources" element={<KnowledgeResourcesPage />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/knowledge" element={<AdminKnowledgeHub />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/orders" element={<AdminOrders />} />
