@@ -376,3 +376,23 @@ export const adminKnowledgeAPI = {
     }),
   getAnalytics: (params?: any) => api.get('/admin/knowledge/analytics', { params }),
 };
+
+// Publications / Posts (Public)
+export const postsAPI = {
+  getPosts: (params?: any) => api.get('/posts', { params }),
+  getPostBySlug: (slug: string) => api.get(`/posts/${slug}`),
+  track: (data: { slug?: string; contentId?: string; eventType?: 'VIEW' | 'CLICK' | 'SHARE'; sessionId?: string }) =>
+    api.post('/posts/track', data),
+};
+
+// Publications / Posts (Admin)
+export const adminPostsAPI = {
+  listPosts: (params?: any) => api.get('/admin/posts', { params }),
+  createPost: (data: any) => api.post('/admin/posts', data),
+  updatePost: (id: string, data: any) => api.put(`/admin/posts/${id}`, data),
+  publishPost: (id: string) => api.patch(`/admin/posts/${id}/publish`),
+  unpublishPost: (id: string, data?: { status?: 'DRAFT' | 'ARCHIVED' }) => api.patch(`/admin/posts/${id}/unpublish`, data || {}),
+  deletePost: (id: string) => api.delete(`/admin/posts/${id}`),
+  getAnalytics: (params?: any) => api.get('/admin/posts/analytics', { params }),
+  getPostAnalytics: (id: string, params?: any) => api.get(`/admin/posts/${id}/analytics`, { params }),
+};

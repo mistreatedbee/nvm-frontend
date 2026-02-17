@@ -50,6 +50,12 @@ export function Navbar() {
             <Link to="/vendors" className="text-gray-700 hover:text-nvm-green-primary transition">
               Vendors
             </Link>
+            <Link to="/announcements" className="text-gray-700 hover:text-nvm-green-primary transition">
+              Announcements
+            </Link>
+            <Link to="/blog" className="text-gray-700 hover:text-nvm-green-primary transition">
+              Blog
+            </Link>
           </div>
 
           {/* Right Side Actions */}
@@ -145,6 +151,12 @@ export function Navbar() {
               </Link>
               <Link to="/vendors" className="text-gray-700 hover:text-nvm-green-primary">
                 Vendors
+              </Link>
+              <Link to="/announcements" className="text-gray-700 hover:text-nvm-green-primary">
+                Announcements
+              </Link>
+              <Link to="/blog" className="text-gray-700 hover:text-nvm-green-primary">
+                Blog
               </Link>
               {isAuthenticated ? (
                 <>
