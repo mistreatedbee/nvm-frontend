@@ -259,7 +259,7 @@ export function ProductDetail() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <ProductReviews productId={product._id} vendorId={product.vendor._id} />
+          <ProductReviews productId={product._id} />
         </motion.div>
       </div>
     </div>

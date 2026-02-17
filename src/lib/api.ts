@@ -217,6 +217,10 @@ export const orderManagementAPI = {
 export const reviewsAPI = {
   create: (data: any) => api.post('/reviews', data),
   getAll: (params?: any) => api.get('/reviews', { params }),
+  getProductPageReviews: (productId: string, params?: any) =>
+    api.get(`/products/${productId}/reviews`, { params }),
+  getVendorPageReviews: (vendorId: string, params?: any) =>
+    api.get(`/vendors/${vendorId}/reviews`, { params }),
   getProductReviews: (productId: string, params?: any) =>
     api.get(`/reviews/product/${productId}`, { params }),
   getVendorReviews: (vendorId: string, params?: any) =>
@@ -224,10 +228,15 @@ export const reviewsAPI = {
   update: (id: string, data: any) => api.put(`/reviews/${id}`, data),
   delete: (id: string) => api.delete(`/reviews/${id}`),
   addResponse: (id: string, data: any) => api.put(`/reviews/${id}/response`, data),
-  markHelpful: (id: string) => api.put(`/reviews/${id}/helpful`),
+  markHelpful: (id: string) => api.post(`/reviews/${id}/helpful`),
   report: (id: string, data: any) => api.post(`/reviews/${id}/report`, data),
   getReported: (params?: any) => api.get('/reviews/admin/reported', { params }),
   moderate: (id: string, data: any) => api.put(`/reviews/${id}/moderate`, data),
+  adminList: (params?: any) => api.get('/admin/reviews', { params }),
+  adminApprove: (id: string) => api.patch(`/admin/reviews/${id}/approve`),
+  adminReject: (id: string, data: { reason: string }) => api.patch(`/admin/reviews/${id}/reject`, data),
+  adminHide: (id: string, data: { reason: string }) => api.patch(`/admin/reviews/${id}/hide`, data),
+  adminDelete: (id: string, data?: { reason?: string }) => api.delete(`/admin/reviews/${id}`, { data }),
 };
 
 // Categories

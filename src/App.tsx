@@ -44,6 +44,7 @@ import { CustomerInvoices } from './pages/CustomerInvoices';
 import { VendorInvoices } from './pages/VendorInvoices';
 import { VendorTransactions } from './pages/VendorTransactions';
 import { AdminInvoices } from './pages/AdminInvoices';
+import { AdminReviews } from './pages/AdminReviews';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -81,6 +82,7 @@ function App() {
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/orders" element={<AdminOrders />} />
         <Route path="/admin/invoices" element={<AdminInvoices />} />
+        <Route path="/admin/reviews" element={<AdminReviews />} />
         <Route path="/admin/vendors" element={<AdminVendorManagement />} />
         
         {/* Vendor Routes */}

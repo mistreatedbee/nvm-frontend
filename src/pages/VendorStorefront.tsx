@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { MapPin, Star, Share2, Store, Mail, Phone, Globe, MessageSquare } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { ProductCard } from '../components/ProductCard';
+import { VendorReviews } from '../components/VendorReviews';
 import { vendorsAPI, productsAPI } from '../lib/api';
 import { useAuthStore } from '../lib/store';
 import toast from 'react-hot-toast';
@@ -204,6 +205,8 @@ export function VendorStorefront() {
           {/* Decorative Footer Strip */}
           <div className="h-3 bg-gradient-to-r from-nvm-green-primary via-nvm-gold-primary to-nvm-green-600" />
         </motion.div>
+
+        <VendorReviews vendorId={vendor.vendorId || vendor._id} />
 
         {/* Products Section */}
         <div className="mb-8 flex items-center justify-between">

@@ -99,8 +99,8 @@ export function ReviewsSection() {
         {/* Reviews Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {reviews.map((review: any, index: number) => {
-            const userName = review.user?.name || 'Anonymous';
-            const userLocation = review.user?.address?.city || 'South Africa';
+            const userName = review.reviewerId?.name || 'Anonymous';
+            const userLocation = 'South Africa';
             const avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=2D6A4F&color=fff`;
             
             return (
