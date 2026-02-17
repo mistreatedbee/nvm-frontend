@@ -396,3 +396,37 @@ export const adminPostsAPI = {
   getAnalytics: (params?: any) => api.get('/admin/posts/analytics', { params }),
   getPostAnalytics: (id: string, params?: any) => api.get(`/admin/posts/${id}/analytics`, { params }),
 };
+
+// Vendor Toolkit
+export const toolkitAPI = {
+  getSummary: (params?: any) => api.get('/vendor/insights/summary', { params }),
+  getProducts: (params?: any) => api.get('/vendor/insights/products', { params }),
+  getProductDetail: (productId: string, params?: any) => api.get(`/vendor/insights/products/${productId}`, { params }),
+  getPlaybookModules: () => api.get('/vendor/playbook/modules'),
+  getPlaybookModule: (slug: string) => api.get(`/vendor/playbook/modules/${slug}`),
+  getPlaybookLesson: (slug: string) => api.get(`/vendor/playbook/lessons/${slug}`),
+  updateProgress: (data: { lessonId: string; completed?: boolean; checklistUpdates?: Record<string, boolean> }) =>
+    api.post('/vendor/playbook/progress', data),
+};
+
+// Product Tracking
+export const trackingAPI = {
+  trackProductView: (data: { productId: string; source?: 'SEARCH' | 'HOMEPAGE' | 'VENDOR_PAGE' | 'DIRECT' | 'OTHER'; sessionId?: string }) =>
+    api.post('/track/product-view', data),
+  trackProductClick: (data: { productId: string; source?: 'SEARCH' | 'HOMEPAGE' | 'VENDOR_PAGE' | 'DIRECT' | 'OTHER'; sessionId?: string }) =>
+    api.post('/track/product-click', data),
+  trackAddToCart: (data: { productId: string; source?: 'SEARCH' | 'HOMEPAGE' | 'VENDOR_PAGE' | 'DIRECT' | 'OTHER'; sessionId?: string }) =>
+    api.post('/track/add-to-cart', data),
+};
+
+// Admin Playbook
+export const adminPlaybookAPI = {
+  listModules: () => api.get('/admin/playbook/modules'),
+  listLessons: (params?: any) => api.get('/admin/playbook/lessons', { params }),
+  createModule: (data: any) => api.post('/admin/playbook/modules', data),
+  updateModule: (id: string, data: any) => api.put(`/admin/playbook/modules/${id}`, data),
+  publishModule: (id: string) => api.patch(`/admin/playbook/modules/${id}/publish`),
+  createLesson: (data: any) => api.post('/admin/playbook/lessons', data),
+  updateLesson: (id: string, data: any) => api.put(`/admin/playbook/lessons/${id}`, data),
+  publishLesson: (id: string) => api.patch(`/admin/playbook/lessons/${id}/publish`),
+};

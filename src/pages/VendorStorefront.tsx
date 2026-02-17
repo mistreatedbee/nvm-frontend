@@ -236,7 +236,7 @@ export function VendorStorefront() {
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {visibleProducts.length > 0 ? (
             visibleProducts.map((product: any, index: number) => (
-              <ProductCard key={product._id} product={product} index={index} />
+              <ProductCard key={product._id} product={product} index={index} trackingSource="VENDOR_PAGE" />
             ))
           ) : (
             <div className="col-span-full text-center py-20 bg-white rounded-lg border-2 border-dashed border-gray-200">

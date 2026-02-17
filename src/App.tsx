@@ -53,6 +53,8 @@ import { AdminKnowledgeHub } from './pages/AdminKnowledgeHub';
 import { PostsListPage } from './pages/PostsListPage';
 import { PostDetailPage } from './pages/PostDetailPage';
 import { AdminPosts } from './pages/AdminPosts';
+import { VendorToolkit } from './pages/VendorToolkit';
+import { AdminPlaybook } from './pages/AdminPlaybook';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -88,6 +90,7 @@ function App() {
         <Route path="/vendor/products/edit/:id" element={<VendorEditProduct />} />
         <Route path="/vendor/orders" element={<VendorOrders />} />
         <Route path="/vendor/analytics" element={<VendorAnalytics />} />
+        <Route path="/vendor/toolkit" element={<VendorToolkit />} />
         <Route path="/vendor/store-profile" element={<VendorStoreProfile />} />
         <Route path="/vendor/knowledge" element={<KnowledgeHubHome />} />
         <Route path="/vendor/knowledge/articles" element={<KnowledgeArticlesPage />} />
@@ -97,6 +100,7 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/knowledge" element={<AdminKnowledgeHub />} />
         <Route path="/admin/posts" element={<AdminPosts />} />
+        <Route path="/admin/playbook" element={<AdminPlaybook />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/orders" element={<AdminOrders />} />

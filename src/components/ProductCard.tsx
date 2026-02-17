@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom';
 import { useCartStore, useWishlistStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
+import { trackingAPI } from '../lib/api';
+import { getTrackingSessionId } from '../utils/tracking';
 
 interface ProductCardProps {
   product: {
@@ -19,9 +21,10 @@ interface ProductCardProps {
     vendorId?: string;
   };
   index?: number;
+  trackingSource?: 'SEARCH' | 'HOMEPAGE' | 'VENDOR_PAGE' | 'DIRECT' | 'OTHER';
 }
 
-export function ProductCard({ product, index = 0 }: ProductCardProps) {
+export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: ProductCardProps) {
   const { addItem } = useCartStore();
   const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore();
   
@@ -46,6 +49,13 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       },
     });
     toast.success('Added to cart!');
+    if (productId) {
+      trackingAPI.trackAddToCart({
+        productId,
+        source: trackingSource,
+        sessionId: getTrackingSessionId()
+      }).catch(() => {});
+    }
   };
 
   const handleToggleWishlist = (e: React.MouseEvent) => {
@@ -59,6 +69,15 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       addToWishlist(productId);
       toast.success('Added to wishlist');
     }
+  };
+
+  const handleProductClick = () => {
+    if (!productId) return;
+    trackingAPI.trackProductClick({
+      productId,
+      source: trackingSource,
+      sessionId: getTrackingSessionId()
+    }).catch(() => {});
   };
 
   return (
@@ -111,7 +130,7 @@ export function ProductCard({ product, index = 0 }: ProductCardProps) {
       </div>
 
       <div className="p-4">
-        <Link to={`/product/${productId}`} className="block">
+        <Link to={`/product/${productId}`} onClick={handleProductClick} className="block">
           <h3 className="font-medium text-gray-900 line-clamp-1 group-hover:text-nvm-green-primary transition-colors">
             {product.name}
           </h3>

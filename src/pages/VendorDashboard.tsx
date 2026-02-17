@@ -20,7 +20,8 @@ import {
   Store,
   MessageSquare,
   Bot,
-  BookOpen
+  BookOpen,
+  Wrench
 } from 'lucide-react';
 
 export function VendorDashboard() {
@@ -300,6 +301,19 @@ export function VendorDashboard() {
                   <div className="ml-4 text-left">
                     <p className="font-semibold text-nvm-dark-900">Knowledge Hub</p>
                     <p className="text-sm text-gray-500">Guides and resources</p>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/vendor/toolkit"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-indigo-400 hover:bg-indigo-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center group-hover:bg-indigo-500 transition-colors">
+                    <Wrench className="w-5 h-5 text-indigo-600 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">Toolkit</p>
+                    <p className="text-sm text-gray-500">Insights and playbook</p>
                   </div>
                 </Link>
 

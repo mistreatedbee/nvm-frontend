@@ -177,7 +177,7 @@ export function AllProducts() {
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.map((product: any, index: number) => (
-              <ProductCard key={product._id} product={product} index={index} />
+              <ProductCard key={product._id} product={product} index={index} trackingSource="SEARCH" />
             ))}
           </div>
         )}

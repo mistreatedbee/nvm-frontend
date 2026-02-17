@@ -138,7 +138,7 @@ export function MarketplaceHome() {
 
           <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {filteredProducts.slice(0, 8).map((product: any, index: number) => (
-              <ProductCard key={product._id || product.id} product={product} index={index} />
+              <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
             ))}
           </motion.div>
 

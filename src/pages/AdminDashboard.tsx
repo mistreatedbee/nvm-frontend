@@ -19,7 +19,8 @@ import {
   MessageCircle,
   Star,
   BookOpen,
-  Newspaper
+  Newspaper,
+  GraduationCap
 } from 'lucide-react';
 
 export function AdminDashboard() {
@@ -170,6 +171,13 @@ export function AdminDashboard() {
               >
                 <Newspaper className="w-4 h-4" />
                 Publications
+              </Link>
+              <Link
+                to="/admin/playbook"
+                className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary transition-all font-semibold flex items-center gap-2"
+              >
+                <GraduationCap className="w-4 h-4" />
+                Playbook
               </Link>
               <Link
                 to="/admin/chats"

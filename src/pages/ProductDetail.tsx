@@ -4,10 +4,11 @@ import { motion } from 'framer-motion';
 import { ShoppingBag, Heart, ArrowLeft, Truck, ShieldCheck, Star, Store, MessageSquare } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { ProductReviews } from '../components/ProductReviews';
-import { productsAPI } from '../lib/api';
+import { productsAPI, trackingAPI } from '../lib/api';
 import { useCartStore, useWishlistStore, useAuthStore } from '../lib/store';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
+import { getTrackingSessionId } from '../utils/tracking';
 
 export function ProductDetail() {
   const { id } = useParams();
@@ -29,7 +30,13 @@ export function ProductDetail() {
   const fetchProduct = async () => {
     try {
       const response = await productsAPI.getById(id!);
-      setProduct(response.data.data);
+      const productData = response.data.data;
+      setProduct(productData);
+      trackingAPI.trackProductView({
+        productId: productData._id,
+        source: 'DIRECT',
+        sessionId: getTrackingSessionId()
+      }).catch(() => {});
     } catch (error: any) {
       toast.error('Product not found');
       navigate('/marketplace');
@@ -54,6 +61,11 @@ export function ProductDetail() {
     });
 
     toast.success('Added to cart!');
+    trackingAPI.trackAddToCart({
+      productId: product._id,
+      source: 'DIRECT',
+      sessionId: getTrackingSessionId()
+    }).catch(() => {});
   };
 
   const handleAddToWishlist = () => {
