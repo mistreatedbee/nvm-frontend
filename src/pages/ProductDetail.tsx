@@ -123,7 +123,7 @@ export function ProductDetail() {
                   </span>
                 </div>
               )}
-              {product.status !== 'active' && (
+              {product.status !== 'PUBLISHED' && (
                 <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                   <span className="px-6 py-3 bg-red-500 text-white font-bold rounded-lg">
                     Currently Unavailable
@@ -199,7 +199,7 @@ export function ProductDetail() {
               </div>
 
               {/* Quantity Selector */}
-              {product.status === 'active' && (!product.trackInventory || product.stock > 0) && (
+              {product.status === 'PUBLISHED' && (!product.trackInventory || product.stock > 0) && (
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Quantity
@@ -226,7 +226,7 @@ export function ProductDetail() {
               <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
                 <button
                   onClick={handleAddToCart}
-                  disabled={product.status !== 'active' || (product.trackInventory && product.stock === 0)}
+                  disabled={product.status !== 'PUBLISHED' || (product.trackInventory && product.stock === 0)}
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-nvm-green-primary text-white rounded-lg font-semibold hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ShoppingBag className="w-5 h-5" />

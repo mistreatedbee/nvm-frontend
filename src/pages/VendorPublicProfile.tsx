@@ -36,7 +36,7 @@ export function VendorPublicProfile() {
     try {
       const [vendorRes, productsRes] = await Promise.all([
         vendorsAPI.getById(vendorId!),
-        productsAPI.getVendorProducts(vendorId!, { limit: 12, status: 'active' })
+        productsAPI.getVendorProducts(vendorId!, { limit: 12 })
       ]);
 
       setVendor(vendorRes.data.data);
@@ -175,7 +175,7 @@ export function VendorPublicProfile() {
                   {products.map((product: any) => (
                     <Link
                       key={product._id}
-                      to={`/products/${product._id}`}
+                      to={`/product/${product._id}`}
                       className="group"
                     >
                       <motion.div

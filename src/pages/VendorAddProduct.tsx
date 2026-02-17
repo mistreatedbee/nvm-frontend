@@ -50,6 +50,7 @@ export function VendorAddProduct() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitMode, setSubmitMode] = useState<'draft' | 'review'>('draft');
   const [myProductCount, setMyProductCount] = useState<number>(0);
 
   const [formData, setFormData] = useState({
@@ -181,9 +182,8 @@ export function VendorAddProduct() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleSubmit = async (mode: 'draft' | 'review') => {
+    setSubmitMode(mode);
     // Validate
     if (!formData.name.trim()) {
       toast.error('Product name is required');
@@ -246,8 +246,15 @@ export function VendorAddProduct() {
         lowStockThreshold: parseInt(formData.lowStockThreshold)
       };
 
-      await productsAPI.create(productData);
-      toast.success('Product created successfully!');
+      const createRes = await productsAPI.create(productData);
+      const createdProductId = createRes.data?.data?._id;
+
+      if (mode === 'review' && createdProductId) {
+        await productsAPI.submitForReview(createdProductId);
+        toast.success('Product submitted for review');
+      } else {
+        toast.success('Draft saved successfully');
+      }
       navigate('/vendor/products');
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create product');
@@ -355,7 +362,10 @@ export function VendorAddProduct() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          onSubmit={handleSubmit}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSubmit('draft');
+          }}
           className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8 space-y-6"
         >
           {/* Product Name */}
@@ -630,11 +640,20 @@ export function VendorAddProduct() {
               Cancel
             </button>
             <button
-              type="submit"
+              type="button"
+              onClick={() => void handleSubmit('draft')}
               disabled={submitting}
               className="flex-1 px-6 py-3 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-dark transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {submitting ? 'Creating...' : 'Create Product'}
+              {submitting && submitMode === 'draft' ? 'Saving...' : 'Save Draft'}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleSubmit('review')}
+              disabled={submitting}
+              className="flex-1 px-6 py-3 bg-nvm-gold-primary text-white rounded-lg hover:opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {submitting && submitMode === 'review' ? 'Submitting...' : 'Submit for Review'}
             </button>
           </div>
         </motion.form>

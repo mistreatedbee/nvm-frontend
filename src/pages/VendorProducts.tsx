@@ -17,26 +17,36 @@ import {
   TrendingUp
 } from 'lucide-react';
 
+const VENDOR_CAN_UNPUBLISH = String(import.meta.env.VITE_VENDOR_CAN_UNPUBLISH || 'false').toLowerCase() === 'true';
+const VENDOR_CAN_REPUBLISH = String(import.meta.env.VITE_VENDOR_CAN_REPUBLISH || 'false').toLowerCase() === 'true';
+
 export function VendorProducts() {
   const [products, setProducts] = useState([]);
   const [vendor, setVendor] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [processingId, setProcessingId] = useState<string>('');
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [statusFilter, page]);
 
   const fetchData = async () => {
     try {
       const [vendorRes, productsRes] = await Promise.all([
         vendorsAPI.getMyProfile(),
-        // Backend enforces limit <= 100 via paginationValidation middleware
-        productsAPI.getMyProducts({ limit: 100 })
+        productsAPI.getMyProducts({ limit: 20, page, status: statusFilter })
       ]);
       setVendor(vendorRes.data.data);
       setProducts(productsRes.data.data || []);
+      setPages(productsRes.data.pages || 1);
+      setTotal(productsRes.data.total || 0);
     } catch (error) {
       console.error('Error fetching data:', error);
+      toast.error('Failed to load products');
     } finally {
       setLoading(false);
     }
@@ -54,6 +64,37 @@ export function VendorProducts() {
     } catch (error: any) {
       toast.dismiss();
       toast.error(error.response?.data?.message || 'Failed to delete product');
+    }
+  };
+
+  const handleSubmit = async (productId: string) => {
+    try {
+      setProcessingId(productId);
+      await productsAPI.submitForReview(productId);
+      toast.success('Submitted for review');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to submit for review');
+    } finally {
+      setProcessingId('');
+    }
+  };
+
+  const handleTogglePublish = async (product: any) => {
+    try {
+      setProcessingId(product._id);
+      if (product.isActive) {
+        await productsAPI.vendorUnpublish(product._id);
+        toast.success('Product unpublished');
+      } else {
+        await productsAPI.vendorPublish(product._id);
+        toast.success('Product republished');
+      }
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update publish state');
+    } finally {
+      setProcessingId('');
     }
   };
 
@@ -158,7 +199,7 @@ export function VendorProducts() {
               </div>
               <div>
                 <div className="text-2xl font-bold text-nvm-dark-900">
-                  {products.filter((p: any) => p.status === 'active').length}
+                  {products.filter((p: any) => p.status === 'PUBLISHED').length}
                 </div>
                 <div className="text-sm text-gray-600">Active Products</div>
               </div>
@@ -187,6 +228,22 @@ export function VendorProducts() {
 
         {/* Products Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="border-b border-gray-200 px-6 py-4 flex flex-wrap gap-2">
+            {['all', 'DRAFT', 'PENDING', 'PUBLISHED', 'REJECTED'].map((status) => (
+              <button
+                key={status}
+                onClick={() => {
+                  setStatusFilter(status);
+                  setPage(1);
+                }}
+                className={`px-3 py-1 rounded-full text-sm ${
+                  statusFilter === status ? 'bg-nvm-green-primary text-white' : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
           {loading ? (
             <div className="text-center py-12">Loading products...</div>
           ) : products.length === 0 ? (
@@ -245,10 +302,17 @@ export function VendorProducts() {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                          product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                          product.status === 'PUBLISHED'
+                            ? (product.isActive ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800')
+                            : product.status === 'REJECTED'
+                              ? 'bg-red-100 text-red-800'
+                              : 'bg-gray-100 text-gray-800'
                         }`}>
-                          {product.status}
+                          {product.status}{product.status === 'PUBLISHED' ? (product.isActive ? ' (Live)' : ' (Hidden)') : ''}
                         </span>
+                        {product.status === 'REJECTED' && product.rejectionReason && (
+                          <div className="text-xs text-red-600 mt-1 max-w-[220px] truncate">{product.rejectionReason}</div>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-2">
@@ -273,12 +337,51 @@ export function VendorProducts() {
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
+                          {(product.status === 'DRAFT' || product.status === 'REJECTED') && (
+                            <button
+                              onClick={() => handleSubmit(product._id)}
+                              disabled={processingId === product._id}
+                              className="px-2 py-1 text-xs bg-nvm-gold-primary text-white rounded"
+                            >
+                              Submit
+                            </button>
+                          )}
+                          {product.status === 'PUBLISHED' && ((product.isActive && VENDOR_CAN_UNPUBLISH) || (!product.isActive && VENDOR_CAN_REPUBLISH)) && (
+                            <button
+                              onClick={() => handleTogglePublish(product)}
+                              disabled={processingId === product._id}
+                              className="px-2 py-1 text-xs bg-gray-800 text-white rounded"
+                            >
+                              {product.isActive ? 'Unpublish' : 'Republish'}
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+          {!loading && pages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
+              <div className="text-sm text-gray-600">Page {page} of {pages} • {total} products</div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page <= 1}
+                  className="px-3 py-1 bg-gray-100 rounded disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <button
+                  onClick={() => setPage((p) => Math.min(pages, p + 1))}
+                  disabled={page >= pages}
+                  className="px-3 py-1 bg-gray-100 rounded disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
             </div>
           )}
         </div>

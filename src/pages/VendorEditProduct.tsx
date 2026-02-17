@@ -6,6 +6,9 @@ import { categoriesAPI, productsAPI, vendorsAPI } from '../lib/api';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Upload, X, DollarSign, Tag } from 'lucide-react';
 
+const VENDOR_CAN_UNPUBLISH = String(import.meta.env.VITE_VENDOR_CAN_UNPUBLISH || 'false').toLowerCase() === 'true';
+const VENDOR_CAN_REPUBLISH = String(import.meta.env.VITE_VENDOR_CAN_REPUBLISH || 'false').toLowerCase() === 'true';
+
 function isMongoId(value: string) {
   return /^[a-f\d]{24}$/i.test(value);
 }
@@ -25,6 +28,7 @@ export function VendorEditProduct() {
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [productMeta, setProductMeta] = useState<any>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -55,7 +59,7 @@ export function VendorEditProduct() {
       const [vendorRes, categoriesRes, productRes] = await Promise.all([
         vendorsAPI.getMyProfile(),
         categoriesAPI.getAll(),
-        productsAPI.getById(productId)
+        productsAPI.getVendorProductById(productId)
       ]);
 
       setVendor(vendorRes.data.data);
@@ -67,6 +71,7 @@ export function VendorEditProduct() {
       setCategories(Array.isArray(categoriesData) ? categoriesData : []);
 
       const product = productRes.data.data;
+      setProductMeta(product);
 
       setFormData({
         name: product?.name || '',
@@ -206,6 +211,38 @@ export function VendorEditProduct() {
     }
   };
 
+  const handleSubmitForReview = async () => {
+    try {
+      setSubmitting(true);
+      await productsAPI.submitForReview(productId);
+      toast.success('Product submitted for review');
+      navigate('/vendor/products');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to submit for review');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTogglePublish = async () => {
+    if (!productMeta?._id) return;
+    try {
+      setSubmitting(true);
+      if (productMeta.isActive) {
+        await productsAPI.vendorUnpublish(productMeta._id);
+        toast.success('Product unpublished');
+      } else {
+        await productsAPI.vendorPublish(productMeta._id);
+        toast.success('Product republished');
+      }
+      navigate('/vendor/products');
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update publish state');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
@@ -273,6 +310,14 @@ export function VendorEditProduct() {
           </Link>
           <h1 className="text-3xl font-display font-bold text-nvm-dark-900 mb-2">Edit Product</h1>
           <p className="text-gray-600">Update your product details and save changes</p>
+          <div className="mt-3 flex items-center gap-3">
+            <span className="px-3 py-1 rounded-full bg-gray-100 text-gray-700 text-sm font-medium">
+              Status: {productMeta?.status || 'DRAFT'}
+            </span>
+            {productMeta?.status === 'REJECTED' && productMeta?.rejectionReason && (
+              <span className="text-sm text-red-600 font-medium">Reason: {productMeta.rejectionReason}</span>
+            )}
+          </div>
         </motion.div>
 
         <motion.form
@@ -486,6 +531,26 @@ export function VendorEditProduct() {
             >
               {submitting ? 'Saving...' : 'Save Changes'}
             </button>
+            {(productMeta?.status === 'DRAFT' || productMeta?.status === 'REJECTED') && (
+              <button
+                type="button"
+                onClick={handleSubmitForReview}
+                disabled={submitting}
+                className="flex-1 px-6 py-3 bg-nvm-gold-primary text-white rounded-lg hover:opacity-90 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Submit for Review
+              </button>
+            )}
+            {productMeta?.status === 'PUBLISHED' && ((productMeta?.isActive && VENDOR_CAN_UNPUBLISH) || (!productMeta?.isActive && VENDOR_CAN_REPUBLISH)) && (
+              <button
+                type="button"
+                onClick={handleTogglePublish}
+                disabled={submitting}
+                className="flex-1 px-6 py-3 bg-gray-800 text-white rounded-lg hover:bg-black transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {productMeta?.isActive ? 'Unpublish' : 'Republish'}
+              </button>
+            )}
           </div>
         </motion.form>
       </div>

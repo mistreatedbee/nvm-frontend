@@ -116,19 +116,28 @@ export const vendorsAPI = {
 
 // Products
 export const productsAPI = {
-  create: (data: any) => api.post('/products', data),
+  create: (data: any) => api.post('/vendor/products', data),
   getAll: (params?: any) => api.get('/products', { params }),
-  getMyProducts: (params?: any) => api.get('/products/my', { params }),
-  getAdminProducts: (params?: any) => api.get('/products/admin', { params }),
+  getMyProducts: (params?: any) => api.get('/vendor/products', { params }),
+  getVendorProductById: (productId: string) => api.get(`/vendor/products/${productId}`),
+  getAdminProducts: (params?: any) => api.get('/admin/products', { params }),
+  getAdminProductById: (productId: string, params?: any) => api.get(`/admin/products/${productId}`, { params }),
   getReportedProducts: (params?: any) => api.get('/products/admin/reported', { params }),
   getById: (id: string) => api.get(`/products/${id}`),
   getBySlug: (slug: string) => api.get(`/products/slug/${slug}`),
   getVendorProducts: (vendorId: string, params?: any) =>
     api.get(`/products/vendor/${vendorId}`, { params }),
   getFeatured: () => api.get('/products/featured'),
-  getAuditTrail: (id: string, params?: any) => api.get(`/products/${id}/audit`, { params }),
-  update: (id: string, data: any) => api.put(`/products/${id}`, data),
+  getHistory: (productId: string, params?: any) => api.get(`/products/${productId}/history`, { params }),
+  update: (productId: string, data: any) => api.put(`/vendor/products/${productId}`, data),
   delete: (id: string) => api.delete(`/products/${id}`),
+  submitForReview: (productId: string) => api.post(`/vendor/products/${productId}/submit`),
+  vendorUnpublish: (productId: string) => api.patch(`/vendor/products/${productId}/unpublish`),
+  vendorPublish: (productId: string) => api.patch(`/vendor/products/${productId}/publish`),
+  adminApprove: (productId: string) => api.patch(`/admin/products/${productId}/approve`),
+  adminReject: (productId: string, data: { reason: string }) => api.patch(`/admin/products/${productId}/reject`, data),
+  adminUnpublish: (productId: string, data?: { reasonOptional?: string }) => api.patch(`/admin/products/${productId}/unpublish`, data || {}),
+  adminRepublish: (productId: string) => api.patch(`/admin/products/${productId}/republish`),
   report: (id: string, data: any) => api.post(`/products/${id}/report`, data),
   moderate: (id: string, data: any) => api.put(`/products/${id}/moderate`, data),
 };
