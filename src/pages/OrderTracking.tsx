@@ -1,112 +1,73 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
-import { orderManagementAPI } from '../lib/api';
+import { ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
-import {
-  MapPin,
-  Package,
-  Truck,
-  CheckCircle,
-  Clock,
-  Navigation,
-  Phone,
-  Mail,
-  Calendar,
-  ArrowLeft
-} from 'lucide-react';
+import { ArrowLeft, Clock, Package, Truck } from 'lucide-react';
 
 export function OrderTracking() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
-  const [tracking, setTracking] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [order, setOrder] = useState<any>(null);
+  const [timeline, setTimeline] = useState<any[]>([]);
 
   useEffect(() => {
-    if (orderId) {
-      fetchTracking();
-    }
+    if (!orderId) return;
+    loadOrder();
   }, [orderId]);
 
-  const fetchTracking = async () => {
+  const loadOrder = async () => {
+    setLoading(true);
+    setError('');
     try {
-      const response = await orderManagementAPI.getTracking(orderId!);
-      setTracking(response.data.data);
-    } catch (error: any) {
-      toast.error('Failed to load tracking information');
-      console.error(error);
+      const response = await ordersAPI.getMyOrderById(orderId!);
+      setOrder(response.data.data?.order || null);
+      setTimeline(response.data.data?.timeline || []);
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Failed to load order tracking');
+      toast.error('Failed to load order tracking');
     } finally {
       setLoading(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    const colors: any = {
-      pending: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      confirmed: 'bg-blue-100 text-blue-800 border-blue-300',
-      processing: 'bg-purple-100 text-purple-800 border-purple-300',
-      shipped: 'bg-indigo-100 text-indigo-800 border-indigo-300',
-      delivered: 'bg-green-100 text-green-800 border-green-300',
-      cancelled: 'bg-red-100 text-red-800 border-red-300',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="w-6 h-6" />;
-      case 'confirmed':
-      case 'processing':
-        return <Package className="w-6 h-6" />;
-      case 'shipped':
-        return <Truck className="w-6 h-6" />;
-      case 'delivered':
-        return <CheckCircle className="w-6 h-6" />;
-      default:
-        return <Package className="w-6 h-6" />;
-    }
-  };
-
-  const getPaymentStatusColor = (status: string) => {
-    const colors: any = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      'awaiting-confirmation': 'bg-orange-100 text-orange-800',
-      paid: 'bg-green-100 text-green-800',
-      failed: 'bg-red-100 text-red-800',
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
-  };
+  const groupedByVendor = useMemo(() => {
+    const map = new Map<string, { name: string; items: any[] }>();
+    (order?.items || []).forEach((item: any) => {
+      const key = item.vendorId?._id || item.vendorId || item.vendor || 'unknown';
+      const name = item.vendorId?.storeName || item.vendor?.storeName || 'Vendor';
+      if (!map.has(String(key))) {
+        map.set(String(key), { name, items: [] });
+      }
+      map.get(String(key))?.items.push(item);
+    });
+    return [...map.values()];
+  }, [order]);
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="flex items-center justify-center h-96">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-nvm-green-primary"></div>
-        </div>
+        <div className="max-w-5xl mx-auto px-4 py-16 text-center text-gray-600">Loading tracking...</div>
       </div>
     );
   }
 
-  if (!tracking) {
+  if (error || !order) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
-        <div className="max-w-4xl mx-auto px-4 py-12">
-          <div className="text-center">
-            <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Order Not Found</h2>
-            <p className="text-gray-600 mb-6">We couldn't find tracking information for this order.</p>
-            <button
-              onClick={() => navigate('/orders')}
-              className="px-6 py-3 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-colors"
-            >
-              View All Orders
-            </button>
-          </div>
+        <div className="max-w-5xl mx-auto px-4 py-16 text-center">
+          <p className="text-red-600 mb-4">{error || 'Order not found'}</p>
+          <button
+            onClick={() => navigate('/orders')}
+            className="px-5 py-2 bg-nvm-green-primary text-white rounded-lg"
+          >
+            Back to My Orders
+          </button>
         </div>
       </div>
     );
@@ -115,276 +76,119 @@ export function OrderTracking() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-
       <div className="max-w-6xl mx-auto px-4 py-8">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+        <button
+          onClick={() => navigate('/orders')}
+          className="inline-flex items-center gap-2 text-gray-600 mb-6"
         >
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-4"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            Back
-          </button>
-          <div className="flex items-center justify-between">
+          <ArrowLeft className="w-4 h-4" />
+          Back
+        </button>
+
+        <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-3xl font-bold text-nvm-dark-900 mb-2">
-                Track Order #{tracking.orderNumber}
-              </h1>
-              <p className="text-gray-600">
-                {tracking.fulfillmentMethod === 'delivery' ? 'Delivery Order' : 'Collection Order'}
+              <h1 className="text-2xl font-bold text-nvm-dark-900">Order #{order.orderNumber}</h1>
+              <p className="text-sm text-gray-600">
+                Placed {new Date(order.createdAt).toLocaleString('en-ZA')}
               </p>
             </div>
             <div className="text-right">
-              <span className={`inline-block px-4 py-2 rounded-full text-sm font-medium border ${getStatusColor(tracking.status)}`}>
-                {tracking.status.toUpperCase()}
-              </span>
-              <div className="mt-2">
-                <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(tracking.paymentStatus)}`}>
-                  Payment: {tracking.paymentStatus}
-                </span>
-              </div>
+              <p className="text-sm text-gray-500">Status</p>
+              <p className="font-semibold">{String(order.orderStatus || 'PENDING').replace(/_/g, ' ')}</p>
+              <p className="text-sm text-gray-500">Payment: {order.paymentStatus}</p>
             </div>
           </div>
-        </motion.div>
+        </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            {/* Map Placeholder (For future map integration) */}
-            {tracking.fulfillmentMethod === 'delivery' && tracking.currentLocation && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
-              >
-                <h2 className="text-xl font-semibold text-nvm-dark-900 mb-4 flex items-center gap-2">
-                  <MapPin className="w-6 h-6" />
-                  Current Location
-                </h2>
-                
-                {/* Map Placeholder */}
-                <div className="bg-gray-100 rounded-lg h-64 flex items-center justify-center mb-4">
-                  <div className="text-center">
-                    <Navigation className="w-12 h-12 text-gray-400 mx-auto mb-2" />
-                    <p className="text-gray-600 font-medium">Map Integration Coming Soon</p>
-                    <p className="text-sm text-gray-500">Install React-Leaflet to display map</p>
-                  </div>
-                </div>
-
-                {tracking.currentLocation.address && (
-                  <div className="flex items-start gap-2">
-                    <MapPin className="w-5 h-5 text-nvm-green-primary mt-0.5" />
-                    <div>
-                      <p className="font-medium text-gray-900">Current Position</p>
-                      <p className="text-gray-600">{tracking.currentLocation.address}</p>
-                      <p className="text-sm text-gray-500">
-                        Updated: {new Date(tracking.currentLocation.updatedAt).toLocaleString('en-ZA')}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {/* Collection Point Info */}
-            {tracking.fulfillmentMethod === 'collection' && tracking.collectionPoint && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-blue-50 border border-blue-200 rounded-xl p-6"
-              >
-                <h2 className="text-xl font-semibold text-blue-900 mb-4 flex items-center gap-2">
-                  <MapPin className="w-6 h-6" />
-                  Collection Point
-                </h2>
-                <div className="space-y-3">
-                  <div>
-                    <p className="text-sm text-blue-700">Location Name</p>
-                    <p className="font-medium text-blue-900">{tracking.collectionPoint.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-blue-700">Address</p>
-                    <p className="font-medium text-blue-900">{tracking.collectionPoint.address}</p>
-                  </div>
-                  {tracking.collectionPoint.phone && (
-                    <div>
-                      <p className="text-sm text-blue-700">Phone</p>
-                      <p className="font-medium text-blue-900">{tracking.collectionPoint.phone}</p>
-                    </div>
-                  )}
-                  {tracking.collectionPoint.instructions && (
-                    <div>
-                      <p className="text-sm text-blue-700">Collection Instructions</p>
-                      <p className="font-medium text-blue-900">{tracking.collectionPoint.instructions}</p>
-                    </div>
-                  )}
-                </div>
-                
-                {/* Collection Status Indicator */}
-                {tracking.status === 'shipped' && (
-                  <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <div className="flex items-center gap-2 text-green-800">
-                      <CheckCircle className="w-5 h-5" />
-                      <span className="font-semibold">Ready for Collection!</span>
-                    </div>
-                    <p className="text-sm text-green-700 mt-1">
-                      Your order is ready to be collected from the location above.
-                    </p>
-                  </div>
-                )}
-              </motion.div>
-            )}
-
-            {/* Tracking Timeline */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
-            >
-              <h2 className="text-xl font-semibold text-nvm-dark-900 mb-6 flex items-center gap-2">
-                <Clock className="w-6 h-6" />
-                Tracking History
-              </h2>
-
-              <div className="space-y-6">
-                {tracking.trackingHistory && tracking.trackingHistory.length > 0 ? (
-                  tracking.trackingHistory
-                    .slice()
-                    .reverse()
-                    .map((event: any, index: number) => (
-                      <div key={index} className="flex gap-4">
-                        <div className="flex flex-col items-center">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-                            index === 0 ? 'bg-nvm-green-primary text-white' : 'bg-gray-200 text-gray-600'
-                          }`}>
-                            {getStatusIcon(event.status)}
-                          </div>
-                          {index < tracking.trackingHistory.length - 1 && (
-                            <div className="w-0.5 h-full bg-gray-200 my-2"></div>
-                          )}
-                        </div>
-                        <div className="flex-1 pb-8">
-                          <p className="font-semibold text-gray-900 capitalize">{event.status}</p>
-                          <p className="text-sm text-gray-600">{event.description}</p>
-                          {event.location?.address && (
-                            <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-                              <MapPin className="w-4 h-4" />
-                              {event.location.address}
+            <div className="bg-white rounded-xl border border-gray-100 p-6">
+              <h2 className="text-lg font-semibold mb-4">Items by Vendor</h2>
+              {groupedByVendor.map((group) => (
+                <div key={group.name} className="mb-5 last:mb-0">
+                  <h3 className="font-medium text-gray-800 mb-2">{group.name}</h3>
+                  <div className="space-y-3">
+                    {group.items.map((item: any) => (
+                      <div key={`${item.productId}-${item.vendorId}`} className="border border-gray-100 rounded-lg p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-gray-900">{item.titleSnapshot || item.name}</p>
+                            <p className="text-sm text-gray-500">
+                              Qty {item.qty || item.quantity} • {formatRands(item.priceSnapshot || item.price)}
                             </p>
-                          )}
-                          <p className="text-xs text-gray-400 mt-1">
-                            {new Date(event.timestamp).toLocaleString('en-ZA', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            <p className="text-sm text-gray-600 mt-1">Status: {String(item.status).replace(/_/g, ' ')}</p>
+                          </div>
+                          <p className="font-semibold text-nvm-gold-primary">
+                            {formatRands(item.lineTotal || item.subtotal)}
                           </p>
                         </div>
+                        {item.tracking?.trackingNumber && (
+                          <div className="mt-2 text-sm">
+                            <p>Carrier: {item.tracking.carrier || 'N/A'}</p>
+                            <p>Tracking: {item.tracking.trackingNumber}</p>
+                            {item.tracking.trackingUrl && (
+                              <a className="text-blue-600 underline" href={item.tracking.trackingUrl} target="_blank" rel="noreferrer">
+                                Open tracking link
+                              </a>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    ))
-                ) : (
-                  <p className="text-gray-500 text-center py-8">
-                    No tracking updates available yet
-                  </p>
-                )}
-              </div>
-            </motion.div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-white rounded-xl border border-gray-100 p-6">
+              <h2 className="text-lg font-semibold mb-4">Timeline</h2>
+              {timeline.length === 0 ? (
+                <p className="text-gray-500">No updates yet.</p>
+              ) : (
+                <div className="space-y-4">
+                  {timeline.map((event: any) => (
+                    <div key={event._id} className="flex gap-3">
+                      <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                        {event.toStatus?.includes('SHIPPED') ? <Truck className="w-4 h-4" /> : <Package className="w-4 h-4" />}
+                      </div>
+                      <div>
+                        <p className="font-medium text-gray-900">
+                          {event.level}: {event.fromStatus || 'START'} {'->'} {event.toStatus}
+                        </p>
+                        {event.note ? <p className="text-sm text-gray-600">{event.note}</p> : null}
+                        <p className="text-xs text-gray-500 mt-1">
+                          <Clock className="w-3 h-3 inline mr-1" />
+                          {new Date(event.createdAt).toLocaleString('en-ZA')} • {event.actorRole}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Order Summary */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
-            >
-              <h3 className="font-semibold text-gray-900 mb-4">Order Summary</h3>
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Order Date</span>
-                  <span className="font-medium">
-                    {new Date(tracking.createdAt).toLocaleDateString('en-ZA')}
-                  </span>
-                </div>
-                {tracking.confirmedAt && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Confirmed</span>
-                    <span className="font-medium">
-                      {new Date(tracking.confirmedAt).toLocaleDateString('en-ZA')}
-                    </span>
-                  </div>
-                )}
-                {tracking.shippedAt && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Shipped</span>
-                    <span className="font-medium">
-                      {new Date(tracking.shippedAt).toLocaleDateString('en-ZA')}
-                    </span>
-                  </div>
-                )}
-                {tracking.estimatedDelivery && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Est. Delivery</span>
-                    <span className="font-medium text-nvm-green-primary">
-                      {new Date(tracking.estimatedDelivery).toLocaleDateString('en-ZA')}
-                    </span>
-                  </div>
-                )}
+            <div className="bg-white rounded-xl border border-gray-100 p-6">
+              <h3 className="font-semibold mb-3">Order Summary</h3>
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between"><span>Subtotal</span><span>{formatRands(order.totals?.subtotal || order.subtotal || 0)}</span></div>
+                <div className="flex justify-between"><span>Delivery</span><span>{formatRands(order.totals?.delivery || order.deliveryFee || 0)}</span></div>
+                <div className="flex justify-between"><span>Discount</span><span>-{formatRands(order.totals?.discount || 0)}</span></div>
+                <div className="flex justify-between font-semibold border-t pt-2"><span>Total</span><span>{formatRands(order.totals?.total || order.total || 0)}</span></div>
               </div>
-            </motion.div>
+            </div>
 
-            {/* Shipping Details */}
-            {tracking.shippingAddress && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6"
-              >
-                <h3 className="font-semibold text-gray-900 mb-4">Delivery Address</h3>
-                <div className="space-y-2 text-sm">
-                  <p className="font-medium">{tracking.shippingAddress.fullName}</p>
-                  <p className="text-gray-600">{tracking.shippingAddress.street}</p>
-                  <p className="text-gray-600">
-                    {tracking.shippingAddress.city}, {tracking.shippingAddress.state}
-                  </p>
-                  <p className="text-gray-600">
-                    {tracking.shippingAddress.zipCode}, {tracking.shippingAddress.country}
-                  </p>
-                  <div className="flex items-center gap-2 pt-2">
-                    <Phone className="w-4 h-4 text-gray-400" />
-                    <p className="text-gray-600">{tracking.shippingAddress.phone}</p>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Tracking Number */}
-            {tracking.trackingNumber && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.4 }}
-                className="bg-nvm-green-50 border border-nvm-green-200 rounded-xl p-6"
-              >
-                <h3 className="font-semibold text-nvm-green-900 mb-2">Tracking Number</h3>
-                <p className="text-lg font-mono font-bold text-nvm-green-700">
-                  {tracking.trackingNumber}
-                </p>
-                {tracking.carrier && (
-                  <p className="text-sm text-nvm-green-600 mt-1">Carrier: {tracking.carrier}</p>
-                )}
-              </motion.div>
+            {order.deliveryAddress && (
+              <div className="bg-white rounded-xl border border-gray-100 p-6">
+                <h3 className="font-semibold mb-3">Delivery Address</h3>
+                <p className="text-sm text-gray-700">{order.deliveryAddress.fullName}</p>
+                <p className="text-sm text-gray-700">{order.deliveryAddress.street}</p>
+                <p className="text-sm text-gray-700">{order.deliveryAddress.city}, {order.deliveryAddress.state}</p>
+                <p className="text-sm text-gray-700">{order.deliveryAddress.country} {order.deliveryAddress.zipCode}</p>
+                <p className="text-sm text-gray-700 mt-1">{order.deliveryAddress.phone}</p>
+              </div>
             )}
           </div>
         </div>
@@ -392,4 +196,3 @@ export function OrderTracking() {
     </div>
   );
 }
-

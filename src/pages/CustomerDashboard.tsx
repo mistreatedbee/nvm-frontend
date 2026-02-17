@@ -41,8 +41,8 @@ export function CustomerDashboard() {
       // Calculate stats
       const stats = {
         totalOrders: ordersData.length,
-        pendingOrders: ordersData.filter((o: any) => o.status === 'pending' || o.status === 'processing').length,
-        completedOrders: ordersData.filter((o: any) => o.status === 'delivered').length,
+        pendingOrders: ordersData.filter((o: any) => ['PENDING', 'PROCESSING'].includes(o.orderStatus || o.status)).length,
+        completedOrders: ordersData.filter((o: any) => (o.orderStatus || o.status) === 'DELIVERED').length,
         totalSpent: ordersData.reduce((sum: number, o: any) => sum + (o.total || 0), 0)
       };
       setStats(stats);
@@ -55,19 +55,20 @@ export function CustomerDashboard() {
 
   const getStatusColor = (status: string) => {
     const colors: any = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      confirmed: 'bg-blue-100 text-blue-800',
-      processing: 'bg-purple-100 text-purple-800',
-      shipped: 'bg-indigo-100 text-indigo-800',
-      delivered: 'bg-green-100 text-green-800',
-      cancelled: 'bg-red-100 text-red-800',
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      PROCESSING: 'bg-blue-100 text-blue-800',
+      PARTIALLY_SHIPPED: 'bg-indigo-100 text-indigo-800',
+      SHIPPED: 'bg-indigo-100 text-indigo-800',
+      PARTIALLY_DELIVERED: 'bg-emerald-100 text-emerald-800',
+      DELIVERED: 'bg-green-100 text-green-800',
+      CANCELLED: 'bg-red-100 text-red-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
   const getStatusIcon = (status: string) => {
-    if (status === 'delivered') return <CheckCircle className="w-4 h-4" />;
-    if (status === 'cancelled') return <XCircle className="w-4 h-4" />;
+    if (status === 'DELIVERED') return <CheckCircle className="w-4 h-4" />;
+    if (status === 'CANCELLED') return <XCircle className="w-4 h-4" />;
     return <Clock className="w-4 h-4" />;
   };
 
@@ -271,8 +272,8 @@ export function CustomerDashboard() {
                           </p>
                         </div>
                         <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                          {getStatusIcon(order.status)}
-                          {order.status}
+                          {getStatusIcon(order.orderStatus || order.status)}
+                          {order.orderStatus || order.status}
                         </span>
                       </div>
                       <div className="flex items-center justify-between pt-3 border-t border-gray-100">

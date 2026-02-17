@@ -141,6 +141,13 @@ export function AdminDashboard() {
                 Manage Products
               </Link>
               <Link
+                to="/admin/orders"
+                className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary transition-all font-semibold flex items-center gap-2"
+              >
+                <ShoppingBag className="w-4 h-4" />
+                Manage Orders
+              </Link>
+              <Link
                 to="/admin/chats"
                 className="px-4 py-2 bg-red-50 border-2 border-red-200 text-red-700 rounded-lg hover:border-red-300 hover:bg-red-100 transition-all font-semibold flex items-center gap-2"
               >

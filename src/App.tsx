@@ -26,6 +26,7 @@ import { ResetPassword } from './pages/ResetPassword';
 import { VendorAnalytics } from './pages/VendorAnalytics';
 import { AdminProducts } from './pages/AdminProducts';
 import { AdminVendorManagement } from './pages/AdminVendorManagement';
+import { AdminOrders } from './pages/AdminOrders';
 import { VendorRegistration } from './pages/VendorRegistration';
 import { VendorApprovalStatus } from './pages/VendorApprovalStatus';
 import { VendorDocuments } from './pages/VendorDocuments';
@@ -74,6 +75,7 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/products" element={<AdminProducts />} />
+        <Route path="/admin/orders" element={<AdminOrders />} />
         <Route path="/admin/vendors" element={<AdminVendorManagement />} />
         
         {/* Vendor Routes */}

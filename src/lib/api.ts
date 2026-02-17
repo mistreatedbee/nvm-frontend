@@ -147,10 +147,33 @@ export const ordersAPI = {
   create: (data: any) => api.post('/orders', data),
   getAll: (params?: any) => api.get('/orders', { params }),
   getById: (id: string) => api.get(`/orders/${id}`),
-  getMyOrders: (params?: any) => api.get('/orders/my/orders', { params }),
+  getMyOrders: (params?: any) => api.get('/orders/my', { params }),
+  getMyOrderById: (orderId: string) => api.get(`/orders/my/${orderId}`),
+  getMyOrderTracking: (orderId: string) => api.get(`/orders/my/${orderId}/tracking`),
   getVendorOrders: (params?: any) => api.get('/orders/vendor/orders', { params }),
   updateStatus: (id: string, data: any) => api.put(`/orders/${id}/status`, data),
   cancel: (id: string, data: any) => api.put(`/orders/${id}/cancel`, data),
+};
+
+export const vendorOrdersAPI = {
+  getOrders: (params?: any) => api.get('/vendor/orders', { params }),
+  getById: (orderId: string) => api.get(`/vendor/orders/${orderId}`),
+  updateItemStatus: (orderId: string, productId: string, data: { status: string; note?: string }) =>
+    api.patch(`/vendor/orders/${orderId}/items/${productId}/status`, data),
+  updateItemTracking: (
+    orderId: string,
+    productId: string,
+    data: { carrier?: string; trackingNumber?: string; trackingUrl?: string }
+  ) => api.patch(`/vendor/orders/${orderId}/items/${productId}/tracking`, data),
+};
+
+export const adminOrdersAPI = {
+  getOrders: (params?: any) => api.get('/admin/orders', { params }),
+  getById: (orderId: string) => api.get(`/admin/orders/${orderId}`),
+  updateStatus: (orderId: string, data: { status: string; reason?: string }) =>
+    api.patch(`/admin/orders/${orderId}/status`, data),
+  cancel: (orderId: string, data: { reason: string; items?: Array<{ productId: string; vendorId?: string }> }) =>
+    api.patch(`/admin/orders/${orderId}/cancel`, data),
 };
 
 // Invoices

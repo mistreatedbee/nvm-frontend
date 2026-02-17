@@ -9,34 +9,34 @@ import {
   Package, 
   Search,
   Filter,
-  Clock,
-  CheckCircle,
-  XCircle,
-  Truck,
-  FileText,
-  Eye,
   MapPin,
-  MessageSquare
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 export function Orders() {
   const [orders, setOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchOrders();
-  }, [filterStatus]);
+  }, [filterStatus, page]);
 
   const fetchOrders = async () => {
+    setLoading(true);
     try {
       const params: any = {};
       if (filterStatus !== 'all') params.status = filterStatus;
+      params.page = page;
+      params.limit = 10;
       const response = await ordersAPI.getMyOrders(params);
       setOrders(response.data.data || []);
+      setPages(response.data.pages || 1);
     } catch (error) {
-      console.error('Error fetching orders:', error);
       toast.error('Failed to fetch orders');
     } finally {
       setLoading(false);
@@ -47,41 +47,18 @@ export function Orders() {
     order.orderNumber?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const getUniqueVendors = (order: any) => {
-    const seen = new Set<string>();
-    const unique: Array<{ id: string; name: string }> = [];
-
-    (order.items || []).forEach((item: any) => {
-      const rawVendor = item.vendor;
-      const vendorId = typeof rawVendor === 'string' ? rawVendor : rawVendor?._id;
-      const vendorName = rawVendor?.storeName || `Vendor ${unique.length + 1}`;
-
-      if (vendorId && !seen.has(vendorId)) {
-        seen.add(vendorId);
-        unique.push({ id: vendorId, name: vendorName });
-      }
-    });
-
-    return unique;
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string = '') => {
     const colors: any = {
-      pending: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      confirmed: 'bg-blue-100 text-blue-800 border-blue-200',
-      processing: 'bg-purple-100 text-purple-800 border-purple-200',
-      shipped: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      delivered: 'bg-green-100 text-green-800 border-green-200',
-      cancelled: 'bg-red-100 text-red-800 border-red-200',
+      PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      PROCESSING: 'bg-blue-100 text-blue-800 border-blue-200',
+      PARTIALLY_SHIPPED: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      SHIPPED: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+      PARTIALLY_DELIVERED: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+      DELIVERED: 'bg-green-100 text-green-800 border-green-200',
+      CANCELLED: 'bg-red-100 text-red-800 border-red-200',
+      REFUNDED: 'bg-purple-100 text-purple-800 border-purple-200'
     };
     return colors[status] || 'bg-gray-100 text-gray-800 border-gray-200';
-  };
-
-  const getStatusIcon = (status: string) => {
-    if (status === 'delivered') return <CheckCircle className="w-5 h-5" />;
-    if (status === 'cancelled') return <XCircle className="w-5 h-5" />;
-    if (status === 'shipped') return <Truck className="w-5 h-5" />;
-    return <Clock className="w-5 h-5" />;
   };
 
   return (
@@ -123,16 +100,20 @@ export function Orders() {
               <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <select
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e) => {
+                  setFilterStatus(e.target.value);
+                  setPage(1);
+                }}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
               >
                 <option value="all">All Orders</option>
-                <option value="pending">Pending</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="processing">Processing</option>
-                <option value="shipped">Shipped</option>
-                <option value="delivered">Delivered</option>
-                <option value="cancelled">Cancelled</option>
+                <option value="PENDING">Pending</option>
+                <option value="PROCESSING">Processing</option>
+                <option value="PARTIALLY_SHIPPED">Partially Shipped</option>
+                <option value="SHIPPED">Shipped</option>
+                <option value="PARTIALLY_DELIVERED">Partially Delivered</option>
+                <option value="DELIVERED">Delivered</option>
+                <option value="CANCELLED">Cancelled</option>
               </select>
             </div>
           </div>
@@ -167,9 +148,8 @@ export function Orders() {
                       <h3 className="text-lg font-semibold text-nvm-dark-900">
                         Order #{order.orderNumber}
                       </h3>
-                      <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.status)}`}>
-                        {getStatusIcon(order.status)}
-                        {order.status}
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(order.orderStatus)}`}>
+                        {String(order.orderStatus || 'PENDING').replace(/_/g, ' ')}
                       </span>
                     </div>
                     <p className="text-sm text-gray-500">
@@ -186,25 +166,8 @@ export function Orders() {
                       className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 transition-colors"
                     >
                       <MapPin className="w-4 h-4" />
-                      Track
+                      View Tracking
                     </Link>
-                    <Link
-                      to={`/orders/${order._id}/invoice`}
-                      className="flex items-center gap-2 px-4 py-2 bg-purple-500 text-white text-sm rounded-lg hover:bg-purple-600 transition-colors"
-                    >
-                      <FileText className="w-4 h-4" />
-                      Invoice
-                    </Link>
-                    {getUniqueVendors(order).slice(0, 2).map((vendor) => (
-                      <Link
-                        key={vendor.id}
-                        to={`/chat?vendorId=${vendor.id}&orderId=${order._id}&type=order`}
-                        className="flex items-center gap-2 px-4 py-2 bg-nvm-green-primary text-white text-sm rounded-lg hover:bg-nvm-green-dark transition-colors"
-                      >
-                        <MessageSquare className="w-4 h-4" />
-                        Chat {vendor.name}
-                      </Link>
-                    ))}
                   </div>
                 </div>
 
@@ -235,10 +198,10 @@ export function Orders() {
 
                 {/* Order Footer */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                  <div className="text-sm text-gray-600">
-                    <p>
-                      Payment: <span className={`font-semibold ${
-                        order.paymentStatus === 'paid' ? 'text-green-600' : 'text-yellow-600'
+                    <div className="text-sm text-gray-600">
+                      <p>
+                        Payment: <span className={`font-semibold ${
+                        order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-yellow-600'
                       }`}>
                         {order.paymentStatus}
                       </span>
@@ -253,6 +216,30 @@ export function Orders() {
                 </div>
               </motion.div>
             ))}
+          </div>
+        )}
+
+        {!loading && pages > 1 && (
+          <div className="flex items-center justify-center gap-3 mt-8">
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Prev
+            </button>
+            <span className="text-sm text-gray-600">
+              Page {page} of {pages}
+            </span>
+            <button
+              disabled={page >= pages}
+              onClick={() => setPage((prev) => Math.min(pages, prev + 1))}
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg disabled:opacity-50"
+            >
+              Next
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         )}
       </div>
