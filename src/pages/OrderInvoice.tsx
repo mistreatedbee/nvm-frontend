@@ -22,6 +22,7 @@ export function OrderInvoice() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const [invoice, setInvoice] = useState<any>(null);
+  const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,7 +34,46 @@ export function OrderInvoice() {
   const fetchInvoice = async () => {
     try {
       const response = await invoicesAPI.getData(orderId!);
-      setInvoice(response.data.data);
+      const payload = response.data.data;
+      if (Array.isArray(payload)) {
+        const customerInvoice = payload.find((inv: any) => inv.type === 'CUSTOMER') || payload[0];
+        const vendorInvoices = payload.filter((inv: any) => inv.type === 'VENDOR');
+        setInvoiceId(customerInvoice?._id || null);
+        setInvoice({
+          orderNumber: customerInvoice?.metadata?.orderNumber || orderId,
+          date: customerInvoice?.issuedAt,
+          customer: {
+            name: customerInvoice?.billingDetails?.name || '-',
+            email: customerInvoice?.billingDetails?.email || '-',
+            phone: customerInvoice?.billingDetails?.phone || '-'
+          },
+          shippingAddress: customerInvoice?.billingDetails?.address || {},
+          vendors: vendorInvoices.map((inv: any) => ({
+            vendor: {
+              storeName: inv.vendorDetails?.storeName || 'Vendor',
+              email: inv.vendorDetails?.contact?.email || '-',
+              phone: inv.vendorDetails?.contact?.phone || '-',
+              bankDetails: inv.vendorDetails?.banking || null
+            },
+            items: (inv.lineItems || []).map((line: any, idx: number) => ({
+              id: `${inv._id}-${idx}`,
+              name: line.titleSnapshot,
+              price: line.unitPrice,
+              quantity: line.qty,
+              subtotal: line.lineTotal
+            }))
+          })),
+          subtotal: customerInvoice?.totals?.subtotal || 0,
+          shippingCost: customerInvoice?.totals?.deliveryFee || 0,
+          tax: customerInvoice?.totals?.tax || 0,
+          discount: customerInvoice?.totals?.discount || 0,
+          total: customerInvoice?.totals?.total || 0,
+          paymentMethod: customerInvoice?.metadata?.paymentMethod || '',
+          paymentStatus: (customerInvoice?.metadata?.paymentStatus || '').toLowerCase()
+        });
+      } else {
+        setInvoice(payload);
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to load invoice');
       navigate(-1);
@@ -49,7 +89,9 @@ export function OrderInvoice() {
   const handleDownload = async () => {
     try {
       toast.loading('Generating PDF...');
-      const response = await invoicesAPI.download(orderId!);
+      const response = invoiceId
+        ? await invoicesAPI.downloadMyPdf(invoiceId)
+        : await invoicesAPI.download(orderId!);
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;

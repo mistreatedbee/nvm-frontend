@@ -40,6 +40,10 @@ import { ChatInbox } from './pages/ChatInbox';
 import { AdminSupportChats } from './pages/AdminSupportChats';
 import { Notifications } from './pages/Notifications';
 import { ChatFloatingButtons } from './components/chat/ChatFloatingButtons';
+import { CustomerInvoices } from './pages/CustomerInvoices';
+import { VendorInvoices } from './pages/VendorInvoices';
+import { VendorTransactions } from './pages/VendorTransactions';
+import { AdminInvoices } from './pages/AdminInvoices';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -76,6 +80,7 @@ function App() {
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/orders" element={<AdminOrders />} />
+        <Route path="/admin/invoices" element={<AdminInvoices />} />
         <Route path="/admin/vendors" element={<AdminVendorManagement />} />
         
         {/* Vendor Routes */}
@@ -91,6 +96,9 @@ function App() {
         <Route path="/orders" element={<Orders />} />
         <Route path="/orders/:orderId/track" element={<OrderTracking />} />
         <Route path="/orders/:orderId/invoice" element={<OrderInvoice />} />
+        <Route path="/customer/invoices" element={<CustomerInvoices />} />
+        <Route path="/vendor/invoices" element={<VendorInvoices />} />
+        <Route path="/vendor/transactions" element={<VendorTransactions />} />
         
         {/* Shopping Routes */}
           <Route path="/cart" element={<Cart />} />

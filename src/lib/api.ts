@@ -178,8 +178,23 @@ export const adminOrdersAPI = {
 
 // Invoices
 export const invoicesAPI = {
+  getMy: (params?: any) => api.get('/invoices/my', { params }),
+  getMyById: (invoiceId: string) => api.get(`/invoices/my/${invoiceId}`),
+  downloadMyPdf: (invoiceId: string) => api.get(`/invoices/my/${invoiceId}/pdf`, { responseType: 'blob' }),
+  getVendorInvoices: (params?: any) => api.get('/vendor/invoices', { params }),
+  getVendorInvoiceById: (invoiceId: string) => api.get(`/vendor/invoices/${invoiceId}`),
+  downloadVendorPdf: (invoiceId: string) => api.get(`/vendor/invoices/${invoiceId}/pdf`, { responseType: 'blob' }),
+  getAdminInvoices: (params?: any) => api.get('/admin/invoices', { params }),
+  getAdminInvoiceById: (invoiceId: string) => api.get(`/admin/invoices/${invoiceId}`),
+  regenerateAdminPdf: (invoiceId: string) => api.post(`/admin/invoices/${invoiceId}/regenerate-pdf`),
+  voidAdminInvoice: (invoiceId: string, data: { reason: string }) => api.patch(`/admin/invoices/${invoiceId}/void`, data),
   download: (orderId: string) => api.get(`/invoices/${orderId}`, { responseType: 'blob' }),
   getData: (orderId: string) => api.get(`/invoices/${orderId}/data`),
+};
+
+export const vendorTransactionsAPI = {
+  getMy: (params?: any) => api.get('/vendor/transactions', { params }),
+  getByVendorForAdmin: (vendorId: string, params?: any) => api.get(`/admin/vendors/${vendorId}/transactions`, { params })
 };
 
 // Order Management (Payment & Tracking)
