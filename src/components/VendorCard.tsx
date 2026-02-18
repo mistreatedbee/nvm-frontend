@@ -60,6 +60,8 @@ export function VendorCard({
   
   // Get rating
   const rating = vendor.rating || 0;
+  const isVerifiedVendor = String(vendor.verificationStatus || '').toUpperCase() === 'VERIFIED';
+  const isTopRated = Boolean(vendor.topRatedBadge);
 
   return (
     <motion.div 
@@ -113,6 +115,14 @@ export function VendorCard({
             <p className="text-nvm-earth-ochre font-medium text-sm">
               {specialty}
             </p>
+            <div className="flex items-center gap-2 mt-2">
+              {isVerifiedVendor ? (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">Verified Vendor</span>
+              ) : null}
+              {isTopRated ? (
+                <span className="text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">Top Rated</span>
+              ) : null}
+            </div>
           </div>
           <div className="flex items-center bg-nvm-gold-bg px-2 py-1 rounded-md border border-nvm-gold-primary/20">
             <Star className="w-4 h-4 text-nvm-gold-primary fill-current mr-1" />

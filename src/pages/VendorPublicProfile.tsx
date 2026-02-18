@@ -122,6 +122,14 @@ export function VendorPublicProfile() {
                   <h1 className="text-3xl font-bold text-nvm-dark-900 mb-2">
                     {vendor.storeName}
                   </h1>
+                  <div className="flex items-center gap-2 mb-2">
+                    {String(vendor.verificationStatus || '').toUpperCase() === 'VERIFIED' && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">Verified Vendor</span>
+                    )}
+                    {Boolean(vendor.topRatedBadge) && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">Top Rated</span>
+                    )}
+                  </div>
                   <p className="text-gray-600 capitalize">{vendor.category} • {vendor.businessType}</p>
                 </div>
                 

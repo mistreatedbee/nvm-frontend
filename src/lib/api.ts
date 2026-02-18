@@ -306,6 +306,20 @@ export const reviewsAPI = {
   adminDelete: (id: string, data?: { reason?: string }) => api.delete(`/admin/reviews/${id}`, { data }),
 };
 
+export const reportsAPI = {
+  create: (data: {
+    targetType: 'PRODUCT' | 'VENDOR' | 'USER' | 'REVIEW';
+    targetId: string;
+    reasonCategory: 'SPAM' | 'SCAM' | 'PROHIBITED_ITEM' | 'HARASSMENT' | 'FAKE_PRODUCT' | 'INFRINGEMENT' | 'OTHER';
+    description?: string;
+    evidenceUrls?: string[];
+  }) => api.post('/reports', data),
+  getMy: (params?: any) => api.get('/reports/my', { params }),
+  adminList: (params?: any) => api.get('/admin/reports', { params }),
+  adminGetById: (reportId: string) => api.get(`/admin/reports/${reportId}`),
+  adminUpdateStatus: (reportId: string, data: any) => api.patch(`/admin/reports/${reportId}/status`, data),
+};
+
 // Categories
 export const categoriesAPI = {
   create: (data: any) => api.post('/categories', data),
@@ -557,6 +571,15 @@ export const adminSuiteAPI = {
   analytics: {
     overview: (params?: any) => api.get('/admin/analytics/overview', { params }),
   },
+  trustSafety: {
+    listFraudFlags: (params?: any) => api.get('/admin/fraud-flags', { params }),
+    resolveFraudFlag: (id: string, note?: string) => api.patch(`/admin/fraud/${id}/resolve`, { note }),
+    dismissFraudFlag: (id: string, note: string) => api.patch(`/admin/fraud-flags/${id}/dismiss`, { note }),
+    listFraudRules: (params?: any) => api.get('/admin/fraud-rules', { params }),
+    createFraudRule: (data: any) => api.post('/admin/fraud-rules', data),
+    updateFraudRule: (id: string, data: any) => api.patch(`/admin/fraud-rules/${id}`, data),
+    deleteFraudRule: (id: string, reason?: string) => api.delete(`/admin/fraud-rules/${id}`, { data: reason ? { reason } : undefined }),
+  }
 };
 
 // Knowledge Hub (Vendor/Public)
@@ -700,7 +723,15 @@ export const supportAPI = {
 };
 
 export const disputesAPI = {
-  create: (data: { orderId: string; reason: string; description: string; vendorId?: string; attachments?: any[] }) => api.post('/disputes', data),
+  create: (data: {
+    orderId: string;
+    reason: string;
+    reasonCategory?: 'NON_DELIVERY' | 'WRONG_ITEM' | 'DAMAGED' | 'REFUND_REQUEST' | 'SCAM' | 'OTHER';
+    description: string;
+    vendorId?: string;
+    attachments?: any[];
+    evidenceUrls?: string[];
+  }) => api.post('/disputes', data),
   getMy: (params?: any) => api.get('/disputes/my', { params }),
   getById: (id: string) => api.get(`/disputes/${id}`),
   getMessages: (id: string) => api.get(`/disputes/${id}/messages`),
@@ -712,4 +743,6 @@ export const disputesAPI = {
   getAdmin: (params?: any) => api.get('/disputes/admin', { params }),
   adminUpdate: (id: string, data: { status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED'; resolution?: string }) =>
     api.patch(`/disputes/admin/${id}`, data),
+  adminResolve: (id: string, data: { outcome: 'REFUND_APPROVED' | 'REFUND_DENIED' | 'REPLACEMENT' | 'PARTIAL_REFUND' | 'OTHER'; resolutionNote: string }) =>
+    api.patch(`/admin/disputes/${id}/resolve`, data),
 };
