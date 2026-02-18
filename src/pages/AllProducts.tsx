@@ -1,185 +1,163 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { ProductCard } from '../components/ProductCard';
-import { productsAPI } from '../lib/api';
-import { Search, Filter, SlidersHorizontal } from 'lucide-react';
-import { formatRands } from '../lib/currency';
+import { categoriesAPI, productsAPI } from '../lib/api';
+import { Search } from 'lucide-react';
 
 export function AllProducts() {
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const categoryFromState = location.state?.category;
-  
-  const [products, setProducts] = useState([]);
+
+  const [categories, setCategories] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(categoryFromState || 'all');
-  const [priceRange, setPriceRange] = useState({ min: 0, max: 10000 });
-  const [sortBy, setSortBy] = useState('newest');
+  const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pages, setPages] = useState(1);
+  const [total, setTotal] = useState(0);
+
+  const q = searchParams.get('q') || '';
+  const category = searchParams.get('category') || (categoryFromState || '');
+  const minPrice = searchParams.get('minPrice') || '';
+  const maxPrice = searchParams.get('maxPrice') || '';
+  const sort = searchParams.get('sort') || 'newest';
 
   useEffect(() => {
-    fetchProducts();
+    const loadCategories = async () => {
+      try {
+        const res = await categoriesAPI.getAll();
+        setCategories(res.data.data || []);
+      } catch (_error) {}
+    };
+    loadCategories();
   }, []);
 
   useEffect(() => {
-    if (categoryFromState) {
-      setSelectedCategory(categoryFromState);
+    if (categoryFromState && !searchParams.get('category')) {
+      const next = new URLSearchParams(searchParams);
+      next.set('category', categoryFromState);
+      setSearchParams(next);
     }
   }, [categoryFromState]);
 
-  const fetchProducts = async () => {
-    try {
-      const response = await productsAPI.getAll({ limit: 100 });
-      setProducts(response.data.data || []);
-    } catch (error) {
-      console.error('Error fetching products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const queryParams = useMemo(
+    () => ({
+      q: q || undefined,
+      category: category || undefined,
+      minPrice: minPrice || undefined,
+      maxPrice: maxPrice || undefined,
+      sort,
+      page,
+      limit: 16
+    }),
+    [q, category, minPrice, maxPrice, sort, page]
+  );
 
-  const filteredProducts = products
-    .filter((product: any) => {
-      const matchesSearch = product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           product.description?.toLowerCase().includes(searchTerm.toLowerCase());
-      const categoryName = typeof product.category === 'string' ? product.category : product.category?.name || '';
-      const matchesCategory = selectedCategory === 'all' || 
-                             categoryName.toLowerCase().includes(selectedCategory.toLowerCase());
-      const matchesPrice = product.price >= priceRange.min && product.price <= priceRange.max;
-      return matchesSearch && matchesCategory && matchesPrice;
-    })
-    .sort((a: any, b: any) => {
-      switch (sortBy) {
-        case 'price-low':
-          return a.price - b.price;
-        case 'price-high':
-          return b.price - a.price;
-        case 'newest':
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-        default:
-          return 0;
+  useEffect(() => {
+    const load = async () => {
+      setLoading(true);
+      setError('');
+      try {
+        const res = await productsAPI.search(queryParams);
+        setProducts(res.data.data || []);
+        setTotal(res.data.total || 0);
+        setPages(res.data.pages || 1);
+      } catch (err: any) {
+        setError(err.response?.data?.message || 'Failed to load products');
+      } finally {
+        setLoading(false);
       }
-    });
+    };
+    load();
+  }, [queryParams]);
+
+  const updateParam = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams);
+    if (!value) next.delete(key);
+    else next.set(key, value);
+    setSearchParams(next);
+    setPage(1);
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-center mb-12"
-        >
-          <h1 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">
-            All <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">Products</span>
-          </h1>
-          <p className="text-lg text-gray-600">
-            Browse thousands of products from trusted vendors
-          </p>
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
+          <h1 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-3">Search & Discover Products</h1>
+          <p className="text-lg text-gray-600">Find products with advanced filters and sorting</p>
         </motion.div>
 
-        {/* Filters */}
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {/* Search */}
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-              />
-            </div>
-
-            {/* Category */}
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-            >
-              <option value="all">All Categories</option>
-              <option value="Fashion">Fashion & Clothing</option>
-              <option value="Electronics">Electronics</option>
-              <option value="Home">Home & Garden</option>
-              <option value="Health">Health & Beauty</option>
-              <option value="Food">Food & Beverages</option>
-              <option value="Sports">Sports & Outdoors</option>
-              <option value="Books">Books & Media</option>
-              <option value="Art">Art & Crafts</option>
-              <option value="Services">Services</option>
-            </select>
-
-            {/* Price Range */}
-            <select
-              onChange={(e) => {
-                const [min, max] = e.target.value.split('-').map(Number);
-                setPriceRange({ min, max });
-              }}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-            >
-              <option value="0-10000">All Prices</option>
-              <option value="0-100">Under R100</option>
-              <option value="100-500">R100 - R500</option>
-              <option value="500-1000">R500 - R1000</option>
-              <option value="1000-10000">Over R1000</option>
-            </select>
-
-            {/* Sort */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nvm-green-primary focus:border-transparent"
-            >
-              <option value="newest">Newest First</option>
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-            </select>
+        <div className="bg-white rounded-xl shadow-sm p-5 mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div className="relative lg:col-span-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              value={q}
+              onChange={(e) => updateParam('q', e.target.value)}
+              placeholder="Search by keyword..."
+              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg"
+            />
           </div>
+          <select value={category} onChange={(e) => updateParam('category', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg">
+            <option value="">All categories</option>
+            {categories.map((c: any) => (
+              <option key={c._id} value={c.slug || c._id}>{c.name}</option>
+            ))}
+          </select>
+          <input value={minPrice} onChange={(e) => updateParam('minPrice', e.target.value)} placeholder="Min price" type="number" min={0} className="px-3 py-2 border border-gray-300 rounded-lg" />
+          <input value={maxPrice} onChange={(e) => updateParam('maxPrice', e.target.value)} placeholder="Max price" type="number" min={0} className="px-3 py-2 border border-gray-300 rounded-lg" />
+          <select value={sort} onChange={(e) => updateParam('sort', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg md:col-span-2 lg:col-span-1">
+            <option value="relevance">Relevance</option>
+            <option value="newest">Newest</option>
+            <option value="price_asc">Price: Low to High</option>
+            <option value="price_desc">Price: High to Low</option>
+            <option value="rating_desc">Top Rated</option>
+            <option value="best_selling">Best Selling</option>
+          </select>
         </div>
 
-        {/* Results Count */}
-        <div className="mb-6 flex items-center justify-between">
-          <span className="text-gray-600">
-            Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
-          </span>
-          {selectedCategory !== 'all' && (
-            <button
-              onClick={() => setSelectedCategory('all')}
-              className="text-nvm-green-primary font-medium hover:underline"
-            >
-              Clear Filters
-            </button>
-          )}
+        <div className="mb-5 flex items-center justify-between">
+          <span className="text-gray-600">{loading ? 'Loading...' : `Showing ${products.length} of ${total} results`}</span>
+          <button
+            onClick={() => {
+              setSearchParams(new URLSearchParams());
+              setPage(1);
+            }}
+            className="text-nvm-green-primary text-sm hover:underline"
+          >
+            Clear filters
+          </button>
         </div>
 
-        {/* Products Grid */}
+        {error && <div className="mb-4 bg-red-50 border border-red-200 text-red-700 p-3 rounded-lg">{error}</div>}
+
         {loading ? (
-          <div className="text-center py-12">Loading products...</div>
-        ) : filteredProducts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">No products found matching your criteria</p>
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedCategory('all');
-                setPriceRange({ min: 0, max: 10000 });
-              }}
-              className="text-nvm-green-primary font-medium hover:underline"
-            >
-              Clear all filters
-            </button>
-          </div>
-        ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.map((product: any, index: number) => (
-              <ProductCard key={product._id} product={product} index={index} trackingSource="SEARCH" />
+            {Array.from({ length: 8 }).map((_, idx) => (
+              <div key={idx} className="h-64 bg-white rounded-lg border animate-pulse" />
             ))}
           </div>
+        ) : products.length === 0 ? (
+          <div className="bg-white border rounded-lg py-14 text-center">
+            <p className="text-gray-600 mb-2">No products found</p>
+            <p className="text-sm text-gray-500">Try adjusting search terms, category, or price range.</p>
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {products.map((product: any, index: number) => (
+                <ProductCard key={product._id} product={product} index={index} trackingSource="SEARCH" />
+              ))}
+            </div>
+            <div className="mt-8 flex items-center justify-center gap-3">
+              <button disabled={page <= 1} onClick={() => setPage((p) => p - 1)} className="px-3 py-2 border rounded disabled:opacity-50">Previous</button>
+              <span className="text-sm text-gray-600">Page {page} of {pages}</span>
+              <button disabled={page >= pages} onClick={() => setPage((p) => p + 1)} className="px-3 py-2 border rounded disabled:opacity-50">Next</button>
+            </div>
+          </>
         )}
       </div>
     </div>

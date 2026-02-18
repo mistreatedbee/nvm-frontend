@@ -64,6 +64,7 @@ function App() {
       <Routes>
         <Route path="/" element={<MarketplaceHome />} />
         <Route path="/marketplace" element={<AllProducts />} />
+        <Route path="/search" element={<AllProducts />} />
         <Route path="/vendors" element={<AllVendors />} />
         <Route path="/vendor/:id" element={<VendorStorefront />} />
         <Route path="/vendors/:slug" element={<VendorStorefront />} />

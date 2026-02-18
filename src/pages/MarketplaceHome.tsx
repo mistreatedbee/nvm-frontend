@@ -17,7 +17,8 @@ import { Link } from 'react-router-dom';
 
 export function MarketplaceHome() {
   const [activeCategory, setActiveCategory] = useState('all');
-  const [apiProducts, setApiProducts] = useState([]);
+  const [apiFeaturedProducts, setApiFeaturedProducts] = useState([]);
+  const [apiTrendingProducts, setApiTrendingProducts] = useState([]);
   const [apiVendors, setApiVendors] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -25,18 +26,14 @@ export function MarketplaceHome() {
     // Fetch public data for guest/customer browsing.
     const fetchData = async () => {
       try {
-        const [featuredRes, vendorsRes] = await Promise.all([
+        const [featuredRes, trendingRes, vendorsRes] = await Promise.all([
           productsAPI.getFeatured(),
+          productsAPI.getTrending({ range: '7d', limit: 8 }),
           vendorsAPI.getAll({ limit: 4 })
         ]);
 
-        let products = featuredRes.data.data || [];
-        if (products.length === 0) {
-          const fallbackRes = await productsAPI.getAll({ limit: 8, sort: 'popular' });
-          products = fallbackRes.data.data || [];
-        }
-
-        setApiProducts(products);
+        setApiFeaturedProducts(featuredRes.data.data || []);
+        setApiTrendingProducts(trendingRes.data.data || []);
         setApiVendors(vendorsRes.data.data || []);
       } catch (error) {
         console.error('Failed to fetch homepage marketplace data:', error);
@@ -47,7 +44,8 @@ export function MarketplaceHome() {
     fetchData();
   }, []);
 
-  const displayProducts = apiProducts;
+  const displayProducts = apiFeaturedProducts;
+  const trendingProducts = apiTrendingProducts;
   const displayVendors = apiVendors;
   const filteredProducts = activeCategory === 'all' 
     ? displayProducts 
@@ -125,7 +123,7 @@ export function MarketplaceHome() {
           >
             <div className="inline-flex items-center gap-2 px-4 py-2 bg-nvm-gold-primary/10 rounded-full mb-4">
               <Sparkles className="w-5 h-5 text-nvm-gold-primary" />
-              <span className="text-nvm-gold-primary font-semibold">Trending Now</span>
+              <span className="text-nvm-gold-primary font-semibold">Featured Picks</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">
               Featured <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">Products</span>
@@ -154,6 +152,42 @@ export function MarketplaceHome() {
               </motion.button>
             </Link>
           </div>
+        </section>
+
+        <section>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-10"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-nvm-green-primary/10 rounded-full mb-4">
+              <TrendingUp className="w-5 h-5 text-nvm-green-primary" />
+              <span className="text-nvm-green-primary font-semibold">Trending Now</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">
+              Trending <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">Products</span>
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Ranked by real user activity and purchases in the last 7 days.
+            </p>
+          </motion.div>
+
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div key={idx} className="h-64 rounded-lg border bg-white animate-pulse" />
+              ))}
+            </div>
+          ) : trendingProducts.length === 0 ? (
+            <div className="bg-white border rounded-lg text-center py-10 text-gray-500">No trending products yet.</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {trendingProducts.slice(0, 8).map((product: any, index: number) => (
+                <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+              ))}
+            </div>
+          )}
         </section>
 
       </main>
