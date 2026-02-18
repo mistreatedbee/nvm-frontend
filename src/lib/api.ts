@@ -527,6 +527,38 @@ export const adminControlAPI = {
   getAuditLogs: (params?: any) => api.get('/admin/audit-logs', { params }),
 };
 
+export const adminSuiteAPI = {
+  categories: {
+    list: (params?: any) => api.get('/admin/categories', { params }),
+    create: (data: any) => api.post('/admin/categories', data),
+    update: (id: string, data: any) => api.put(`/admin/categories/${id}`, data),
+    feature: (id: string, isFeatured: boolean) => api.patch(`/admin/categories/${id}/feature`, { isFeatured }),
+    reorder: (orderedIds: string[]) => api.patch('/admin/categories/reorder', { orderedIds }),
+    deactivate: (id: string, isActive: boolean, unpublishProducts?: boolean) => api.patch(`/admin/categories/${id}/deactivate`, { isActive, unpublishProducts }),
+    delete: (id: string, reason?: string) => api.delete(`/admin/categories/${id}`, { data: reason ? { reason } : undefined }),
+  },
+  cms: {
+    listPages: (params?: any) => api.get('/admin/cms-pages', { params }),
+    createPage: (data: any) => api.post('/admin/cms-pages', data),
+    updatePage: (id: string, data: any) => api.put(`/admin/cms-pages/${id}`, data),
+    deletePage: (id: string, reason?: string) => api.delete(`/admin/cms-pages/${id}`, { data: reason ? { reason } : undefined }),
+    publishPage: (id: string) => api.patch(`/admin/cms-pages/${id}/publish`),
+    unpublishPage: (id: string) => api.patch(`/admin/cms-pages/${id}/unpublish`),
+    listBanners: (params?: any) => api.get('/admin/banners', { params }),
+    createBanner: (data: any) => api.post('/admin/banners', data),
+    updateBanner: (id: string, data: any) => api.put(`/admin/banners/${id}`, data),
+    deleteBanner: (id: string, reason?: string) => api.delete(`/admin/banners/${id}`, { data: reason ? { reason } : undefined }),
+    listHomepageSections: (params?: any) => api.get('/admin/homepage-sections', { params }),
+    createHomepageSection: (data: any) => api.post('/admin/homepage-sections', data),
+    updateHomepageSection: (id: string, data: any) => api.put(`/admin/homepage-sections/${id}`, data),
+    deleteHomepageSection: (id: string, reason?: string) => api.delete(`/admin/homepage-sections/${id}`, { data: reason ? { reason } : undefined }),
+    reorderHomepageSections: (orderedIds: string[]) => api.patch('/admin/homepage-sections/reorder', { orderedIds }),
+  },
+  analytics: {
+    overview: (params?: any) => api.get('/admin/analytics/overview', { params }),
+  },
+};
+
 // Knowledge Hub (Vendor/Public)
 export const knowledgeAPI = {
   getArticles: (params?: any) => api.get('/knowledge/articles', { params }),

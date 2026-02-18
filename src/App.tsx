@@ -71,6 +71,9 @@ import { VendorInventory } from './pages/VendorInventory';
 import { VendorMarketing } from './pages/VendorMarketing';
 import { VendorWallet } from './pages/VendorWallet';
 import { VendorReviewsManagement } from './pages/VendorReviewsManagement';
+import { AdminCategories } from './pages/AdminCategories';
+import { AdminContentManager } from './pages/AdminContentManager';
+import { AdminAnalyticsOverview } from './pages/AdminAnalyticsOverview';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -141,6 +144,9 @@ function App() {
         <Route path="/admin/disputes" element={<AdminDisputes />} />
         <Route path="/admin/disputes/:id" element={<Disputes />} />
         <Route path="/admin/vendors" element={<AdminVendorManagement />} />
+        <Route path="/admin/categories" element={<AdminCategories />} />
+        <Route path="/admin/content" element={<AdminContentManager />} />
+        <Route path="/admin/analytics" element={<AdminAnalyticsOverview />} />
         
         {/* Vendor Routes */}
         <Route path="/vendor/register" element={<VendorRegistration />} />

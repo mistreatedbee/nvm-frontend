@@ -196,6 +196,9 @@ export function AdminDashboard() {
 
           <div className="flex flex-wrap gap-3 mt-4">
             <Link to="/admin/vendors" className="px-4 py-2 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 font-semibold flex items-center gap-2"><Store className="w-4 h-4" />Manage Vendors</Link>
+            <Link to="/admin/categories" className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary font-semibold flex items-center gap-2"><BookOpen className="w-4 h-4" />Categories</Link>
+            <Link to="/admin/content" className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary font-semibold flex items-center gap-2"><Newspaper className="w-4 h-4" />Content</Link>
+            <Link to="/admin/analytics" className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary font-semibold flex items-center gap-2"><TrendingUp className="w-4 h-4" />Analytics</Link>
             <Link to="/admin/users" className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary font-semibold flex items-center gap-2"><Users className="w-4 h-4" />Manage Users</Link>
             <Link to="/admin/products" className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary font-semibold flex items-center gap-2"><Package className="w-4 h-4" />Manage Products</Link>
             <Link to="/admin/orders" className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary font-semibold flex items-center gap-2"><ShoppingBag className="w-4 h-4" />Manage Orders</Link>
