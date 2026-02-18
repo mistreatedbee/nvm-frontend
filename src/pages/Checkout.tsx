@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Navbar } from '../components/Navbar';
 import { useCartStore, useAuthStore } from '../lib/store';
-import { addressesAPI, cartAPI, checkoutAPI, helpAPI, ordersAPI } from '../lib/api';
+import { addressesAPI, cartAPI, checkoutAPI, helpAPI, logisticsAPI, ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
 import { FileText, MapPin, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -17,6 +17,8 @@ interface CheckoutForm {
   state: string;
   country: string;
   zipCode: string;
+  lat?: string;
+  lng?: string;
 }
 
 export function Checkout() {
@@ -40,6 +42,8 @@ export function Checkout() {
   const [saveAddressForNextTime, setSaveAddressForNextTime] = useState(false);
   const [checkoutError, setCheckoutError] = useState('');
   const [helpSuggestions, setHelpSuggestions] = useState<any[]>([]);
+  const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY');
+  const [quotedShipping, setQuotedShipping] = useState<number | null>(null);
 
   const {
     register,
@@ -84,7 +88,7 @@ export function Checkout() {
     () => cartItems.reduce((sum, item) => sum + Number(item.priceSnapshot || 0) * Number(item.qty || 0), 0),
     [cartItems]
   );
-  const shipping = cartItems.length ? 50 : 0;
+  const shipping = deliveryMethod === 'PICKUP' ? 0 : (quotedShipping ?? (cartItems.length ? 50 : 0));
   const tax = subtotal * 0.15;
   const totalBeforeDiscount = subtotal + shipping + tax;
   const totalDiscount = Math.min(totalBeforeDiscount, promoDiscount + giftCardApplied);
@@ -116,6 +120,8 @@ export function Checkout() {
         state: data.state,
         country: data.country || 'South Africa',
         zipCode: data.zipCode,
+        lat: data.lat ? Number(data.lat) : undefined,
+        lng: data.lng ? Number(data.lng) : undefined
       };
       if (selectedAddressId) {
         const selected = savedAddresses.find((address: any) => String(address._id) === String(selectedAddressId));
@@ -132,6 +138,24 @@ export function Checkout() {
         }
       }
 
+      if (Number.isFinite(Number(shippingAddressPayload.lat)) && Number.isFinite(Number(shippingAddressPayload.lng))) {
+        try {
+          const quoteRes = await logisticsAPI.quote({
+            address: shippingAddressPayload,
+            cartItems: freshCartItems.map((item: any) => ({
+              productId: item.productId,
+              quantity: item.qty,
+              price: item.priceSnapshot
+            }))
+          });
+          const options = quoteRes.data?.data?.options || [];
+          const option = options.find((entry: any) => entry.method === deliveryMethod);
+          if (option) {
+            setQuotedShipping(Number(option.fee || 0));
+          }
+        } catch (_error) {}
+      }
+
       const orderData = {
         items: freshCartItems.map((item: any) => ({
           product: item.productId,
@@ -141,6 +165,7 @@ export function Checkout() {
         shippingAddress: shippingAddressPayload,
         billingAddress: shippingAddressPayload,
         paymentMethod: 'INVOICE',
+        deliveryMethod,
         promoCode: appliedPromoCode || undefined,
         giftCardCode: appliedGiftCardCode || undefined
       };
@@ -408,6 +433,37 @@ export function Checkout() {
                       placeholder="2000"
                     />
                     {errors.zipCode && <p className="mt-1 text-sm text-red-600">{errors.zipCode.message}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Latitude (optional)</label>
+                    <input
+                      type="text"
+                      {...register('lat')}
+                      disabled={Boolean(selectedAddressId)}
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
+                      placeholder="-26.2041"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Longitude (optional)</label>
+                    <input
+                      type="text"
+                      {...register('lng')}
+                      disabled={Boolean(selectedAddressId)}
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
+                      placeholder="28.0473"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Method</label>
+                    <select
+                      value={deliveryMethod}
+                      onChange={(e) => setDeliveryMethod(e.target.value as 'DELIVERY' | 'PICKUP')}
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg"
+                    >
+                      <option value="DELIVERY">Delivery</option>
+                      <option value="PICKUP">Pickup</option>
+                    </select>
                   </div>
                   {isAuthenticated && !selectedAddressId && (
                     <div className="md:col-span-2">

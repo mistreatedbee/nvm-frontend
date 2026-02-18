@@ -530,6 +530,12 @@ export const checkoutAPI = {
   redeemGiftCard: (code: string, total: number) => api.post('/checkout/gift-card/redeem', { code, total }),
 };
 
+export const logisticsAPI = {
+  quote: (data: { address: any; cartItems: any[] }) => api.post('/logistics/quote', data),
+  nearbyPickupPoints: (params: { near: string; radiusKm?: number }) => api.get('/pickup-points', { params }),
+  vendorPickupPoints: (vendorId: string) => api.get(`/vendors/${vendorId}/pickup-points`),
+};
+
 export const adminControlAPI = {
   getActivity: (params?: any) => api.get('/admin/activity', { params }),
   getUsers: (params?: any) => api.get('/admin/users', { params }),
