@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useCartStore, useWishlistStore } from '../lib/store';
+import { useAuthStore, useCartStore, useWishlistStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
 import { trackingAPI } from '../lib/api';
@@ -26,29 +26,35 @@ interface ProductCardProps {
 
 export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: ProductCardProps) {
   const { addItem } = useCartStore();
-  const { addItem: addToWishlist, removeItem: removeFromWishlist, isInWishlist } = useWishlistStore();
+  const { toggleItem, isInWishlist } = useWishlistStore();
+  const { isAuthenticated } = useAuthStore();
   
   const productId = product._id || product.id || '';
   const productImage = product.image || product.images?.[0]?.url || DEFAULT_IMAGE_DATA_URI;
   const categoryName = typeof product.category === 'string' ? product.category : product.category?.name || 'Product';
   const inWishlist = isInWishlist(productId);
 
-  const handleAddToCart = (e: React.MouseEvent) => {
+  const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    addItem({
-      productId,
-      name: product.name,
-      price: product.price,
-      quantity: 1,
-      image: productImage,
-      vendor: {
-        id: product.vendor?._id || product.vendorId || '',
-        name: product.vendor?.storeName || 'Vendor',
-      },
-    });
-    toast.success('Added to cart!');
+    try {
+      await addItem({
+        productId,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        image: productImage,
+        vendor: {
+          id: product.vendor?._id || product.vendorId || '',
+          name: product.vendor?.storeName || 'Vendor',
+        },
+      });
+      toast.success('Added to cart!');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to add to cart');
+      return;
+    }
     if (productId) {
       trackingAPI.trackAddToCart({
         productId,
@@ -58,16 +64,20 @@ export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: Pr
     }
   };
 
-  const handleToggleWishlist = (e: React.MouseEvent) => {
+  const handleToggleWishlist = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    
-    if (inWishlist) {
-      removeFromWishlist(productId);
-      toast.success('Removed from wishlist');
-    } else {
-      addToWishlist(productId);
-      toast.success('Added to wishlist');
+
+    if (!isAuthenticated) {
+      toast.error('Please login to save items');
+      return;
+    }
+
+    try {
+      const next = await toggleItem(productId);
+      toast.success(next ? 'Added to wishlist' : 'Removed from wishlist');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Could not update wishlist');
     }
   };
 
@@ -92,6 +102,7 @@ export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: Pr
         <img
           src={productImage}
           alt={product.name}
+          loading="lazy"
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
         />
 

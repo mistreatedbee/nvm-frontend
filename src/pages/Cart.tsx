@@ -1,19 +1,26 @@
-import React from 'react';
+﻿import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
-import { useCartStore } from '../lib/store';
+import { useAuthStore, useCartStore } from '../lib/store';
 import { formatRands } from '../lib/currency';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function Cart() {
   const navigate = useNavigate();
-  const { items, removeItem, updateQuantity, getTotal, clearCart } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
+  const { items, removeItem, updateQuantity, getTotal, clearCart, syncFromServer, syncing } = useCartStore();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      syncFromServer().catch(() => {});
+    }
+  }, [isAuthenticated, syncFromServer]);
 
   const subtotal = getTotal();
-  const shipping = items.length > 0 ? 50 : 0; // R50 standard shipping
-  const tax = subtotal * 0.15; // 15% VAT
+  const shipping = items.length > 0 ? 50 : 0;
+  const tax = subtotal * 0.15;
   const total = subtotal + shipping + tax;
 
   const handleCheckout = () => {
@@ -28,7 +35,7 @@ export function Cart() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-24 sm:pb-12">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -55,7 +62,7 @@ export function Cart() {
             <p className="text-gray-600 mb-8">Add some products to get started!</p>
             <Link
               to="/marketplace"
-              className="inline-flex items-center px-8 py-4 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl"
+              className="inline-flex items-center px-8 py-4 min-h-[44px] bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl"
             >
               Continue Shopping
               <ArrowRight className="ml-2 w-5 h-5" />
@@ -63,7 +70,6 @@ export function Cart() {
           </motion.div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Cart Items */}
             <div className="lg:col-span-2 space-y-4">
               <AnimatePresence>
                 {items.map((item, index) => (
@@ -73,43 +79,60 @@ export function Cart() {
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
                     transition={{ delay: index * 0.05 }}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 hover:shadow-md transition-shadow"
+                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow"
                   >
-                    <div className="flex gap-6">
+                    <div className="flex gap-4 sm:gap-6">
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-24 h-24 object-cover rounded-lg"
+                        loading="lazy"
+                        className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg"
                       />
                       <div className="flex-1">
-                        <div className="flex justify-between items-start mb-2">
-                          <div>
-                            <h3 className="font-semibold text-nvm-dark-900 mb-1">{item.name}</h3>
-                            <p className="text-sm text-gray-500">{item.vendor.name}</p>
+                        <div className="flex justify-between items-start mb-2 gap-2">
+                          <div className="min-w-0">
+                            <h3 className="font-semibold text-nvm-dark-900 mb-1 truncate">{item.name}</h3>
+                            <p className="text-sm text-gray-500 truncate">{item.vendor.name}</p>
                           </div>
                           <button
-                            onClick={() => {
-                              removeItem(item.productId);
-                              toast.success('Removed from cart');
+                            onClick={async () => {
+                              try {
+                                await removeItem(item.productId);
+                                toast.success('Removed from cart');
+                              } catch (error: any) {
+                                toast.error(error?.response?.data?.message || 'Failed to remove item');
+                              }
                             }}
-                            className="p-2 hover:bg-red-50 rounded-lg transition-colors group"
+                            className="p-2 min-h-[44px] min-w-[44px] hover:bg-red-50 rounded-lg transition-colors group"
                           >
                             <Trash2 className="w-5 h-5 text-gray-400 group-hover:text-red-500" />
                           </button>
                         </div>
 
                         <div className="flex items-center justify-between mt-4">
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2">
                             <button
-                              onClick={() => updateQuantity(item.productId, item.quantity - 1)}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors"
+                              onClick={async () => {
+                                try {
+                                  await updateQuantity(item.productId, item.quantity - 1);
+                                } catch (error: any) {
+                                  toast.error(error?.response?.data?.message || 'Failed to update quantity');
+                                }
+                              }}
+                              className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
-                            <span className="w-12 text-center font-semibold">{item.quantity}</span>
+                            <span className="w-10 text-center font-semibold">{item.quantity}</span>
                             <button
-                              onClick={() => updateQuantity(item.productId, item.quantity + 1)}
-                              className="w-8 h-8 flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors"
+                              onClick={async () => {
+                                try {
+                                  await updateQuantity(item.productId, item.quantity + 1);
+                                } catch (error: any) {
+                                  toast.error(error?.response?.data?.message || 'Failed to update quantity');
+                                }
+                              }}
+                              className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
@@ -130,23 +153,26 @@ export function Cart() {
               </AnimatePresence>
 
               <button
-                onClick={() => {
-                  clearCart();
-                  toast.success('Cart cleared');
+                onClick={async () => {
+                  try {
+                    await clearCart();
+                    toast.success('Cart cleared');
+                  } catch (error: any) {
+                    toast.error(error?.response?.data?.message || 'Failed to clear cart');
+                  }
                 }}
-                className="w-full py-3 text-red-600 hover:text-red-700 font-medium transition-colors"
+                className="w-full py-3 min-h-[44px] text-red-600 hover:text-red-700 font-medium transition-colors"
               >
                 Clear Cart
               </button>
             </div>
 
-            {/* Order Summary */}
             <motion.div
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               className="lg:col-span-1"
             >
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 lg:sticky lg:top-24">
                 <h2 className="text-xl font-display font-bold text-nvm-dark-900 mb-6">
                   Order Summary
                 </h2>
@@ -176,7 +202,7 @@ export function Cart() {
 
                 <button
                   onClick={handleCheckout}
-                  className="w-full py-4 bg-nvm-green-primary text-white rounded-lg font-semibold hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
+                  className="w-full py-4 min-h-[44px] bg-nvm-green-primary text-white rounded-lg font-semibold hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
                 >
                   Proceed to Checkout
                   <ArrowRight className="w-5 h-5" />
@@ -190,6 +216,12 @@ export function Cart() {
                 </Link>
               </div>
             </motion.div>
+          </div>
+        )}
+
+        {syncing && (
+          <div className="fixed bottom-4 right-4 bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-xs text-gray-600">
+            Syncing cart...
           </div>
         )}
       </div>

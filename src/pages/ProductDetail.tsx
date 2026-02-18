@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import { ShoppingBag, Heart, ArrowLeft, Truck, ShieldCheck, Star, Store, MessageSquare } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { ProductReviews } from '../components/ProductReviews';
-import { productsAPI, trackingAPI } from '../lib/api';
+import { RecentlyViewedSection } from '../components/RecentlyViewedSection';
+import { productsAPI, recentlyViewedAPI, trackingAPI } from '../lib/api';
 import { useCartStore, useWishlistStore, useAuthStore } from '../lib/store';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
@@ -18,7 +19,7 @@ export function ProductDetail() {
   const [quantity, setQuantity] = useState(1);
   
   const { addItem } = useCartStore();
-  const { addItem: addToWishlist, isInWishlist } = useWishlistStore();
+  const { toggleItem, isInWishlist } = useWishlistStore();
   const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
@@ -37,6 +38,9 @@ export function ProductDetail() {
         source: 'DIRECT',
         sessionId: getTrackingSessionId()
       }).catch(() => {});
+      if (isAuthenticated) {
+        recentlyViewedAPI.track(productData._id).catch(() => {});
+      }
     } catch (error: any) {
       toast.error('Product not found');
       navigate('/marketplace');
@@ -45,22 +49,27 @@ export function ProductDetail() {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!product) return;
-    
-    addItem({
-      productId: product._id,
-      name: product.name,
-      price: product.price,
-      quantity: quantity,
-      image: product.images[0]?.url || '/placeholder-product.png',
-      vendor: {
-        id: product.vendor._id,
-        name: product.vendor.storeName
-      }
-    });
 
-    toast.success('Added to cart!');
+    try {
+      await addItem({
+        productId: product._id,
+        name: product.name,
+        price: product.price,
+        quantity: quantity,
+        image: product.images[0]?.url || '/placeholder-product.png',
+        vendor: {
+          id: product.vendor._id,
+          name: product.vendor.storeName
+        }
+      });
+      toast.success('Added to cart!');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to add item to cart');
+      return;
+    }
+
     trackingAPI.trackAddToCart({
       productId: product._id,
       source: 'DIRECT',
@@ -68,7 +77,7 @@ export function ProductDetail() {
     }).catch(() => {});
   };
 
-  const handleAddToWishlist = () => {
+  const handleAddToWishlist = async () => {
     if (!isAuthenticated) {
       toast.error('Please login to save items');
       return;
@@ -76,8 +85,12 @@ export function ProductDetail() {
 
     if (!product) return;
     
-    addToWishlist(product._id);
-    toast.success('Added to wishlist!');
+    try {
+      const next = await toggleItem(product._id);
+      toast.success(next ? 'Added to wishlist!' : 'Removed from wishlist!');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to update wishlist');
+    }
   };
 
   if (loading) {
@@ -106,7 +119,7 @@ export function ProductDetail() {
     <div className="min-h-screen bg-gray-50">
       <Navbar />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 pb-24 sm:pb-8">
         <Link 
           to="/marketplace" 
           className="inline-flex items-center text-gray-600 hover:text-nvm-green-primary mb-8 transition-colors"
@@ -126,6 +139,7 @@ export function ProductDetail() {
               <img 
                 src={product.images[0]?.url || '/placeholder-product.png'} 
                 alt={product.name} 
+                loading="lazy"
                 className="w-full h-full object-cover" 
               />
               {product.category && (
@@ -273,7 +287,31 @@ export function ProductDetail() {
         >
           <ProductReviews productId={product._id} />
         </motion.div>
+
+        {isAuthenticated && (
+          <div className="mt-10">
+            <RecentlyViewedSection title="Recently Viewed Products" limit={8} excludeProductId={product._id} />
+          </div>
+        )}
       </div>
+
+      {product && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 p-3 sm:hidden">
+          <div className="max-w-7xl mx-auto flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-gray-500 truncate">{product.name}</p>
+              <p className="font-bold text-nvm-gold-primary">{formatRands(product.price)}</p>
+            </div>
+            <button
+              onClick={handleAddToCart}
+              disabled={product.status !== 'PUBLISHED' || (product.trackInventory && product.stock === 0)}
+              className="px-4 py-3 min-h-[44px] bg-nvm-green-primary text-white rounded-lg font-semibold disabled:opacity-50"
+            >
+              Add to Cart
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

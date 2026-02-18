@@ -9,6 +9,7 @@ import { VendorStoreProfile } from './pages/VendorStoreProfile';
 import { ProductDetail } from './pages/ProductDetail';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { CustomerDashboard } from './pages/CustomerDashboard';
+import { Wishlist } from './pages/Wishlist';
 import { VendorDashboard } from './pages/VendorDashboard';
 import { VendorProducts } from './pages/VendorProducts';
 import { VendorAddProduct } from './pages/VendorAddProduct';
@@ -85,6 +86,7 @@ function App() {
         
         {/* Dashboard Routes */}
         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+        <Route path="/wishlist" element={<Wishlist />} />
         <Route path="/vendor/dashboard" element={<VendorDashboard />} />
         <Route path="/vendor/products" element={<VendorProducts />} />
         <Route path="/vendor/products/new" element={<VendorAddProduct />} />

@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { authAPI } from '../lib/api';
-import { useAuthStore } from '../lib/store';
+import { useAuthStore, useCartStore, useWishlistStore } from '../lib/store';
 import { motion } from 'framer-motion';
 
 interface LoginForm {
@@ -29,6 +29,10 @@ export function Login() {
       const { user, token, message } = response.data;
 
       setAuth(user, token);
+      await Promise.all([
+        useCartStore.getState().mergeGuestCartToServer().catch(() => useCartStore.getState().syncFromServer()),
+        useWishlistStore.getState().syncFromServer()
+      ]);
       
       // Show appropriate success message
       if (user.role === 'admin') {

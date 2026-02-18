@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Heart, Menu, X, LogOut, MessageSquare } from 'lucide-react';
-import { useAuthStore, useCartStore } from '../lib/store';
+import { useAuthStore, useCartStore, useWishlistStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import { NotificationBell } from './NotificationBell';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { getItemsCount } = useCartStore();
+  const { getItemsCount, syncFromServer, mergeGuestCartToServer } = useCartStore();
+  const { syncFromServer: syncWishlistFromServer } = useWishlistStore();
   const navigate = useNavigate();
   const cartItemsCount = getItemsCount();
 
@@ -17,6 +18,14 @@ export function Navbar() {
     toast.success('Logged out successfully');
     navigate('/');
   };
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    mergeGuestCartToServer().catch(() => {
+      syncFromServer().catch(() => {});
+    });
+    syncWishlistFromServer().catch(() => {});
+  }, [isAuthenticated, mergeGuestCartToServer, syncFromServer, syncWishlistFromServer]);
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
@@ -163,11 +172,14 @@ export function Navbar() {
                   <Link to="/cart" className="text-gray-700 hover:text-nvm-green-primary">
                     Cart ({cartItemsCount})
                   </Link>
+                  <Link to="/wishlist" className="text-gray-700 hover:text-nvm-green-primary">
+                    Wishlist
+                  </Link>
                   <Link to="/chat" className="text-gray-700 hover:text-nvm-green-primary flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
                     Messages
                   </Link>
-                  <Link to="/dashboard" className="text-gray-700 hover:text-nvm-green-primary">
+                  <Link to={user?.role === 'admin' ? '/admin' : user?.role === 'vendor' ? '/vendor/dashboard' : '/customer/dashboard'} className="text-gray-700 hover:text-nvm-green-primary">
                     Dashboard
                   </Link>
                   <button onClick={handleLogout} className="text-left text-red-600">

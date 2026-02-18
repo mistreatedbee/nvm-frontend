@@ -32,6 +32,8 @@ api.interceptors.response.use(
       // Unauthorized - clear token and redirect to login
       localStorage.removeItem('token');
       localStorage.removeItem('user');
+      localStorage.removeItem('cart-storage');
+      localStorage.removeItem('wishlist-storage');
       window.location.href = '/login';
     }
     return Promise.reject(error);
@@ -181,6 +183,28 @@ export const adminOrdersAPI = {
 export const dashboardAPI = {
   getAdminOverview: () => api.get('/admin/dashboard/overview'),
   getVendorOverview: () => api.get('/vendor/dashboard/overview'),
+};
+
+export const wishlistAPI = {
+  get: (params?: { page?: number; limit?: number }) => api.get('/wishlist', { params }),
+  add: (productId: string) => api.post('/wishlist/add', { productId }),
+  remove: (productId: string) => api.post('/wishlist/remove', { productId }),
+  toggle: (productId: string) => api.post('/wishlist/toggle', { productId }),
+  count: () => api.get('/wishlist/count'),
+};
+
+export const cartAPI = {
+  get: () => api.get('/cart'),
+  add: (productId: string, qty = 1) => api.post('/cart/add', { productId, qty }),
+  update: (productId: string, qty: number) => api.post('/cart/update', { productId, qty }),
+  remove: (productId: string) => api.post('/cart/remove', { productId }),
+  clear: () => api.post('/cart/clear'),
+  merge: (items: Array<{ productId: string; quantity?: number; qty?: number }>) => api.post('/cart/merge', { items }),
+};
+
+export const recentlyViewedAPI = {
+  get: (params?: { page?: number; limit?: number }) => api.get('/recently-viewed', { params }),
+  track: (productId: string) => api.post('/recently-viewed/track', { productId }),
 };
 
 // Invoices

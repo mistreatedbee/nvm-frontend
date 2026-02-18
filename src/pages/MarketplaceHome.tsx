@@ -10,12 +10,15 @@ import { TrustBadges } from '../components/TrustBadges';
 import { NewsletterSection } from '../components/NewsletterSection';
 import { VendorCard } from '../components/VendorCard';
 import { ProductCard } from '../components/ProductCard';
+import { RecentlyViewedSection } from '../components/RecentlyViewedSection';
 import { PatternOverlay } from '../components/PatternOverlay';
 import { productsAPI, vendorsAPI } from '../lib/api';
+import { useAuthStore } from '../lib/store';
 import { ArrowRight, TrendingUp, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function MarketplaceHome() {
+  const { isAuthenticated } = useAuthStore();
   const [activeCategory, setActiveCategory] = useState('all');
   const [apiFeaturedProducts, setApiFeaturedProducts] = useState([]);
   const [apiTrendingProducts, setApiTrendingProducts] = useState([]);
@@ -189,6 +192,10 @@ export function MarketplaceHome() {
             </div>
           )}
         </section>
+
+        {isAuthenticated && (
+          <RecentlyViewedSection title="Recently Viewed" limit={8} />
+        )}
 
       </main>
 

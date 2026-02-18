@@ -83,7 +83,7 @@ export function AllProducts() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 overflow-x-hidden">
       <Navbar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-center mb-10">
@@ -91,25 +91,25 @@ export function AllProducts() {
           <p className="text-lg text-gray-600">Find products with advanced filters and sorting</p>
         </motion.div>
 
-        <div className="bg-white rounded-xl shadow-sm p-5 mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-5 mb-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
           <div className="relative lg:col-span-2">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
               value={q}
               onChange={(e) => updateParam('q', e.target.value)}
               placeholder="Search by keyword..."
-              className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg"
+              className="w-full pl-9 pr-3 py-3 min-h-[44px] border border-gray-300 rounded-lg"
             />
           </div>
-          <select value={category} onChange={(e) => updateParam('category', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg">
+          <select value={category} onChange={(e) => updateParam('category', e.target.value)} className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg">
             <option value="">All categories</option>
             {categories.map((c: any) => (
               <option key={c._id} value={c.slug || c._id}>{c.name}</option>
             ))}
           </select>
-          <input value={minPrice} onChange={(e) => updateParam('minPrice', e.target.value)} placeholder="Min price" type="number" min={0} className="px-3 py-2 border border-gray-300 rounded-lg" />
-          <input value={maxPrice} onChange={(e) => updateParam('maxPrice', e.target.value)} placeholder="Max price" type="number" min={0} className="px-3 py-2 border border-gray-300 rounded-lg" />
-          <select value={sort} onChange={(e) => updateParam('sort', e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg md:col-span-2 lg:col-span-1">
+          <input value={minPrice} onChange={(e) => updateParam('minPrice', e.target.value)} placeholder="Min price" type="number" min={0} className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg" />
+          <input value={maxPrice} onChange={(e) => updateParam('maxPrice', e.target.value)} placeholder="Max price" type="number" min={0} className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg" />
+          <select value={sort} onChange={(e) => updateParam('sort', e.target.value)} className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg md:col-span-2 lg:col-span-1">
             <option value="relevance">Relevance</option>
             <option value="newest">Newest</option>
             <option value="price_asc">Price: Low to High</option>
@@ -126,7 +126,7 @@ export function AllProducts() {
               setSearchParams(new URLSearchParams());
               setPage(1);
             }}
-            className="text-nvm-green-primary text-sm hover:underline"
+            className="text-nvm-green-primary text-sm hover:underline min-h-[44px] px-2"
           >
             Clear filters
           </button>

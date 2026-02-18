@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Navbar } from '../components/Navbar';
 import { useCartStore, useAuthStore } from '../lib/store';
-import { ordersAPI } from '../lib/api';
+import { cartAPI, ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
-import { CreditCard, MapPin, Package, CheckCircle } from 'lucide-react';
+import { CreditCard, MapPin, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface CheckoutForm {
@@ -22,10 +22,12 @@ interface CheckoutForm {
 
 export function Checkout() {
   const navigate = useNavigate();
-  const { items, getTotal, clearCart } = useCartStore();
-  const { isAuthenticated, user } = useAuthStore();
+  const { clearCart: clearLocalCart } = useCartStore();
+  const { isAuthenticated } = useAuthStore();
   const [loading, setLoading] = useState(false);
+  const [loadingCart, setLoadingCart] = useState(true);
   const [step, setStep] = useState<'info' | 'payment' | 'success'>('info');
+  const [cartItems, setCartItems] = useState<any[]>([]);
 
   const {
     register,
@@ -33,29 +35,56 @@ export function Checkout() {
     formState: { errors },
   } = useForm<CheckoutForm>();
 
-  if (!isAuthenticated) {
-    navigate('/login');
-    return null;
-  }
+  useEffect(() => {
+    if (!isAuthenticated) {
+      navigate('/login');
+      return;
+    }
 
-  if (items.length === 0) {
-    navigate('/cart');
-    return null;
-  }
+    const loadCart = async () => {
+      setLoadingCart(true);
+      try {
+        const res = await cartAPI.get();
+        const items = res.data?.data?.items || [];
+        setCartItems(items);
+        if (!items.length) {
+          navigate('/cart');
+        }
+      } catch (_error) {
+        toast.error('Failed to load cart');
+        navigate('/cart');
+      } finally {
+        setLoadingCart(false);
+      }
+    };
 
-  const subtotal = getTotal();
-  const shipping = 50;
+    loadCart();
+  }, [isAuthenticated, navigate]);
+
+  const subtotal = useMemo(
+    () => cartItems.reduce((sum, item) => sum + Number(item.priceSnapshot || 0) * Number(item.qty || 0), 0),
+    [cartItems]
+  );
+  const shipping = cartItems.length ? 50 : 0;
   const tax = subtotal * 0.15;
   const total = subtotal + shipping + tax;
 
   const onSubmit = async (data: CheckoutForm) => {
     setLoading(true);
     try {
+      const freshCartRes = await cartAPI.get();
+      const freshCartItems = freshCartRes.data?.data?.items || [];
+      if (!freshCartItems.length) {
+        toast.error('Your cart is empty');
+        navigate('/cart');
+        return;
+      }
+
       const orderData = {
-        items: items.map(item => ({
+        items: freshCartItems.map((item: any) => ({
           product: item.productId,
-          quantity: item.quantity,
-          price: item.price,
+          quantity: item.qty,
+          price: item.priceSnapshot,
         })),
         shippingAddress: {
           fullName: data.fullName,
@@ -69,12 +98,13 @@ export function Checkout() {
         paymentMethod: data.paymentMethod,
       };
 
-      const response = await ordersAPI.create(orderData);
-      
-      clearCart();
+      await ordersAPI.create(orderData);
+
+      await cartAPI.clear();
+      await clearLocalCart();
       setStep('success');
       toast.success('Order placed successfully!');
-      
+
       setTimeout(() => {
         navigate('/customer/dashboard');
       }, 3000);
@@ -85,13 +115,28 @@ export function Checkout() {
     }
   };
 
+  if (loadingCart) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 py-16">
+          <div className="animate-pulse space-y-4">
+            <div className="h-8 bg-gray-200 rounded w-1/3" />
+            <div className="h-48 bg-white rounded-xl border" />
+            <div className="h-48 bg-white rounded-xl border" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (step === 'success') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center p-12 bg-white rounded-2xl shadow-xl max-w-md"
+          className="text-center p-8 sm:p-12 bg-white rounded-2xl shadow-xl max-w-md"
         >
           <motion.div
             initial={{ scale: 0 }}
@@ -103,11 +148,11 @@ export function Checkout() {
           </motion.div>
           <h2 className="text-3xl font-bold text-nvm-dark-900 mb-4">Order Successful!</h2>
           <p className="text-gray-600 mb-8">
-            Thank you for your purchase. You'll receive an order confirmation email shortly.
+            Thank you for your purchase. You&apos;ll receive an order confirmation email shortly.
           </p>
           <button
             onClick={() => navigate('/customer/dashboard')}
-            className="px-8 py-3 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-colors"
+            className="px-8 py-3 min-h-[44px] bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-colors"
           >
             View Orders
           </button>
@@ -133,10 +178,8 @@ export function Checkout() {
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Checkout Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-              {/* Shipping Information */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -151,98 +194,73 @@ export function Checkout() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Full Name
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                     <input
                       type="text"
                       {...register('fullName', { required: 'Name is required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="John Doe"
                     />
-                    {errors.fullName && (
-                      <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
-                    )}
+                    {errors.fullName && <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Phone Number
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
                     <input
                       type="tel"
                       {...register('phone', { required: 'Phone is required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="+27 12 345 6789"
                     />
-                    {errors.phone && (
-                      <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
-                    )}
+                    {errors.phone && <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>}
                   </div>
 
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Street Address
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Street Address</label>
                     <input
                       type="text"
                       {...register('street', { required: 'Address is required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="123 Main Street"
                     />
-                    {errors.street && (
-                      <p className="mt-1 text-sm text-red-600">{errors.street.message}</p>
-                    )}
+                    {errors.street && <p className="mt-1 text-sm text-red-600">{errors.street.message}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      City
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">City</label>
                     <input
                       type="text"
                       {...register('city', { required: 'City is required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="Johannesburg"
                     />
-                    {errors.city && (
-                      <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>
-                    )}
+                    {errors.city && <p className="mt-1 text-sm text-red-600">{errors.city.message}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Province
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Province</label>
                     <input
                       type="text"
                       {...register('state', { required: 'Province is required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="Gauteng"
                     />
-                    {errors.state && (
-                      <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>
-                    )}
+                    {errors.state && <p className="mt-1 text-sm text-red-600">{errors.state.message}</p>}
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Postal Code
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Postal Code</label>
                     <input
                       type="text"
                       {...register('zipCode', { required: 'Postal code is required' })}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
+                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="2000"
                     />
-                    {errors.zipCode && (
-                      <p className="mt-1 text-sm text-red-600">{errors.zipCode.message}</p>
-                    )}
+                    {errors.zipCode && <p className="mt-1 text-sm text-red-600">{errors.zipCode.message}</p>}
                   </div>
                 </div>
               </motion.div>
 
-              {/* Payment Method */}
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -288,38 +306,34 @@ export function Checkout() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-4 bg-nvm-green-primary text-white rounded-lg font-semibold hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-4 min-h-[44px] bg-nvm-green-primary text-white rounded-lg font-semibold hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? 'Processing...' : `Place Order - ${formatRands(total)}`}
               </button>
             </form>
           </div>
 
-          {/* Order Summary */}
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             className="lg:col-span-1"
           >
-            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 sticky top-24">
-              <h2 className="text-xl font-display font-bold text-nvm-dark-900 mb-6">
-                Order Summary
-              </h2>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 lg:sticky lg:top-24">
+              <h2 className="text-xl font-display font-bold text-nvm-dark-900 mb-6">Order Summary</h2>
 
               <div className="space-y-4 mb-6">
-                {items.map((item) => (
-                  <div key={item.productId} className="flex gap-3">
+                {cartItems.map((item: any) => (
+                  <div key={String(item.productId)} className="flex gap-3">
                     <img
-                      src={item.image}
-                      alt={item.name}
+                      src={item.imageSnapshot || item.product?.image || '/placeholder-product.png'}
+                      alt={item.titleSnapshot}
+                      loading="lazy"
                       className="w-16 h-16 object-cover rounded-lg"
                     />
-                    <div className="flex-1">
-                      <p className="font-semibold text-sm line-clamp-1">{item.name}</p>
-                      <p className="text-xs text-gray-500">Qty: {item.quantity}</p>
-                      <p className="text-sm font-bold text-nvm-gold-primary">
-                        {formatRands(item.price * item.quantity)}
-                      </p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm line-clamp-1">{item.titleSnapshot}</p>
+                      <p className="text-xs text-gray-500">Qty: {item.qty}</p>
+                      <p className="text-sm font-bold text-nvm-gold-primary">{formatRands(item.priceSnapshot * item.qty)}</p>
                     </div>
                   </div>
                 ))}
@@ -341,9 +355,7 @@ export function Checkout() {
                 <div className="border-t border-gray-200 pt-3">
                   <div className="flex justify-between items-center">
                     <span className="text-lg font-bold text-nvm-dark-900">Total</span>
-                    <span className="text-2xl font-bold text-nvm-gold-primary">
-                      {formatRands(total)}
-                    </span>
+                    <span className="text-2xl font-bold text-nvm-gold-primary">{formatRands(total)}</span>
                   </div>
                 </div>
               </div>
