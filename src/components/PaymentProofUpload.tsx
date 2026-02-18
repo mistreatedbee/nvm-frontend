@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { orderManagementAPI } from '../lib/api';
+import { ordersAPI } from '../lib/api';
 import toast from 'react-hot-toast';
 import { Upload, X, CheckCircle, FileImage, Loader2 } from 'lucide-react';
 
@@ -9,8 +9,11 @@ interface PaymentProofUploadProps {
   existingProof?: {
     url: string;
     uploadedAt: string;
+    fileName?: string;
+    reviewNote?: string;
   };
   paymentStatus: string;
+  rejectionReason?: string;
   onUploadSuccess: () => void;
 }
 
@@ -18,6 +21,7 @@ export function PaymentProofUpload({
   orderId, 
   existingProof, 
   paymentStatus,
+  rejectionReason,
   onUploadSuccess 
 }: PaymentProofUploadProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -28,9 +32,9 @@ export function PaymentProofUpload({
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
-      if (!file.type.startsWith('image/')) {
-        toast.error('Please select an image file');
+      const allowed = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'];
+      if (!allowed.includes(file.type)) {
+        toast.error('Please select PDF, JPG, or PNG');
         return;
       }
 
@@ -63,7 +67,7 @@ export function PaymentProofUpload({
       const formData = new FormData();
       formData.append('paymentProof', selectedFile);
 
-      await orderManagementAPI.uploadPaymentProof(orderId, formData);
+      await ordersAPI.uploadPaymentProof(orderId, formData);
 
       toast.success('Payment proof uploaded successfully!');
       setSelectedFile(null);
@@ -84,7 +88,7 @@ export function PaymentProofUpload({
   };
 
   // Show existing proof
-  if (existingProof && paymentStatus === 'awaiting-confirmation') {
+  if (existingProof && paymentStatus === 'UNDER_REVIEW') {
     return (
       <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
         <div className="flex items-start gap-4">
@@ -96,7 +100,7 @@ export function PaymentProofUpload({
               Payment Proof Submitted
             </h3>
             <p className="text-sm text-orange-700 mb-4">
-              Your payment proof has been uploaded and is awaiting vendor confirmation.
+              Your payment proof has been uploaded and is under admin review.
             </p>
             <a
               href={existingProof.url}
@@ -117,7 +121,7 @@ export function PaymentProofUpload({
   }
 
   // Show confirmation if payment is confirmed
-  if (paymentStatus === 'paid') {
+  if (paymentStatus === 'PAID') {
     return (
       <div className="bg-green-50 border border-green-200 rounded-lg p-6">
         <div className="flex items-start gap-4">
@@ -127,7 +131,7 @@ export function PaymentProofUpload({
               Payment Confirmed
             </h3>
             <p className="text-sm text-green-700">
-              Your payment has been verified and confirmed by the vendor.
+              Your payment has been verified and confirmed.
             </p>
           </div>
         </div>
@@ -136,7 +140,7 @@ export function PaymentProofUpload({
   }
 
   // Show upload interface for pending payments
-  if (paymentStatus === 'pending' || paymentStatus === 'failed') {
+  if (paymentStatus === 'AWAITING_PAYMENT' || paymentStatus === 'REJECTED' || paymentStatus === 'PENDING') {
     return (
       <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
         <div className="mb-4">
@@ -147,6 +151,11 @@ export function PaymentProofUpload({
           <p className="text-sm text-yellow-700">
             After making your EFT payment, upload proof of payment (screenshot or receipt) for verification.
           </p>
+          {(paymentStatus === 'REJECTED' && rejectionReason) && (
+            <p className="text-sm text-red-700 mt-2">
+              Previous proof was rejected: {rejectionReason}
+            </p>
+          )}
         </div>
 
         <AnimatePresence>
@@ -179,12 +188,12 @@ export function PaymentProofUpload({
                           Click to select or drag and drop
                         </p>
                         <p className="text-xs text-gray-500 mt-1">
-                          PNG, JPG, GIF up to 5MB
+                          PDF, PNG, JPG up to 5MB
                         </p>
                       </div>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="application/pdf,image/*"
                         onChange={handleFileSelect}
                         className="hidden"
                       />
@@ -215,11 +224,17 @@ export function PaymentProofUpload({
                         <X className="w-4 h-4" />
                       </button>
                     </div>
-                    <img
-                      src={preview}
-                      alt="Payment proof preview"
-                      className="w-full max-h-64 object-contain rounded border border-gray-200"
-                    />
+                    {selectedFile?.type === 'application/pdf' ? (
+                      <div className="w-full h-48 border border-gray-200 rounded flex items-center justify-center text-gray-600">
+                        PDF selected: {selectedFile.name}
+                      </div>
+                    ) : (
+                      <img
+                        src={preview}
+                        alt="Payment proof preview"
+                        className="w-full max-h-64 object-contain rounded border border-gray-200"
+                      />
+                    )}
                   </div>
                 </motion.div>
               )}

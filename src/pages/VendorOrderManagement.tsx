@@ -3,20 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
 import { VendorOrderTracking } from '../components/VendorOrderTracking';
-import { orderManagementAPI, ordersAPI, invoicesAPI } from '../lib/api';
+import { disputesAPI, orderManagementAPI, ordersAPI, invoicesAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
 import {
   Package,
   CheckCircle,
-  XCircle,
   FileImage,
   Download,
-  MapPin,
   Phone,
-  Mail,
-  Calendar,
-  Truck,
   ArrowLeft,
   Clock,
   MessageSquare
@@ -26,6 +21,7 @@ export function VendorOrderManagement() {
   const { orderId } = useParams<{ orderId: string }>();
   const navigate = useNavigate();
   const [order, setOrder] = useState<any>(null);
+  const [orderDispute, setOrderDispute] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
@@ -38,42 +34,20 @@ export function VendorOrderManagement() {
   const fetchOrder = async () => {
     try {
       const response = await ordersAPI.getById(orderId!);
-      setOrder(response.data.data);
+      const data = response.data.data;
+      setOrder(data);
+      try {
+        const disputesRes = await disputesAPI.getMy();
+        const allDisputes = disputesRes.data?.data || [];
+        const matched = allDisputes.find((d: any) => String(d?.order?._id || d?.order) === String(data?._id));
+        setOrderDispute(matched || null);
+      } catch {
+        setOrderDispute(null);
+      }
     } catch (error) {
       toast.error('Failed to load order');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleConfirmPayment = async () => {
-    if (!confirm('Confirm that you have received this payment?')) return;
-
-    setActionLoading(true);
-    try {
-      await orderManagementAPI.confirmPayment(orderId!);
-      toast.success('Payment confirmed successfully!');
-      fetchOrder();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to confirm payment');
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  const handleRejectPayment = async () => {
-    const reason = prompt('Enter reason for rejecting payment:');
-    if (!reason) return;
-
-    setActionLoading(true);
-    try {
-      await orderManagementAPI.rejectPayment(orderId!, { reason });
-      toast.success('Payment rejected');
-      fetchOrder();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to reject payment');
-    } finally {
-      setActionLoading(false);
     }
   };
 
@@ -137,10 +111,10 @@ export function VendorOrderManagement() {
 
   const getPaymentStatusColor = (status: string) => {
     const colors: any = {
-      pending: 'bg-yellow-100 text-yellow-800',
-      'awaiting-confirmation': 'bg-orange-100 text-orange-800',
-      paid: 'bg-green-100 text-green-800',
-      failed: 'bg-red-100 text-red-800',
+      AWAITING_PAYMENT: 'bg-yellow-100 text-yellow-800',
+      UNDER_REVIEW: 'bg-orange-100 text-orange-800',
+      PAID: 'bg-green-100 text-green-800',
+      REJECTED: 'bg-red-100 text-red-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
@@ -201,48 +175,23 @@ export function VendorOrderManagement() {
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
             {/* Payment Proof Section */}
-            {order.paymentMethod === 'eft' || order.paymentMethod === 'bank-transfer' ? (
+            {String(order.paymentMethod).toUpperCase() === 'INVOICE' ? (
               <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
                 <h2 className="text-xl font-semibold text-nvm-dark-900 mb-4 flex items-center gap-2">
                   <FileImage className="w-6 h-6" />
-                  Payment Proof
+                  Invoice Payment Proof
                 </h2>
 
-                {order.paymentProof ? (
+                {order.paymentStatus === 'UNDER_REVIEW' ? (
                   <div className="space-y-4">
-                    <div className="border border-gray-200 rounded-lg p-4">
-                      <img
-                        src={order.paymentProof.url}
-                        alt="Payment proof"
-                        className="w-full max-h-96 object-contain rounded"
-                      />
-                      <p className="text-sm text-gray-500 mt-2">
-                        Uploaded: {new Date(order.paymentProof.uploadedAt).toLocaleString('en-ZA')}
-                      </p>
+                    <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                      <div className="flex items-center gap-2 text-orange-800">
+                        <Clock className="w-5 h-5" />
+                        <span className="font-medium">Proof of payment submitted and under admin review</span>
+                      </div>
                     </div>
 
-                    {order.paymentStatus === 'awaiting-confirmation' && (
-                      <div className="flex gap-3">
-                        <button
-                          onClick={handleConfirmPayment}
-                          disabled={actionLoading}
-                          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium disabled:opacity-50"
-                        >
-                          <CheckCircle className="w-5 h-5" />
-                          Confirm Payment Received
-                        </button>
-                        <button
-                          onClick={handleRejectPayment}
-                          disabled={actionLoading}
-                          className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium disabled:opacity-50"
-                        >
-                          <XCircle className="w-5 h-5" />
-                          Reject Payment
-                        </button>
-                      </div>
-                    )}
-
-                    {order.paymentStatus === 'paid' && (
+                    {order.paymentStatus === 'PAID' && (
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                         <div className="flex items-center gap-2 text-green-800">
                           <CheckCircle className="w-5 h-5" />
@@ -260,10 +209,10 @@ export function VendorOrderManagement() {
                   <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                     <div className="flex items-center gap-2 text-yellow-800">
                       <Clock className="w-5 h-5" />
-                      <span className="font-medium">Awaiting Payment Proof</span>
+                      <span className="font-medium">Awaiting Invoice Payment / POP</span>
                     </div>
                     <p className="text-sm text-yellow-600 mt-1">
-                      Customer has not uploaded payment proof yet.
+                      Fulfilment must wait until paymentStatus is PAID.
                     </p>
                   </div>
                 )}
@@ -271,12 +220,18 @@ export function VendorOrderManagement() {
             ) : null}
 
             {/* Order Tracking Component */}
-            <VendorOrderTracking
-              orderId={orderId!}
-              orderStatus={order.status}
-              fulfillmentMethod={order.fulfillmentMethod || 'delivery'}
-              onUpdate={fetchOrder}
-            />
+            {String(order.paymentStatus).toUpperCase() !== 'PAID' ? (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5 text-yellow-800">
+                Fulfilment actions are disabled until paymentStatus is PAID.
+              </div>
+            ) : (
+              <VendorOrderTracking
+                orderId={orderId!}
+                orderStatus={order.status}
+                fulfillmentMethod={order.fulfillmentMethod || 'delivery'}
+                onUpdate={fetchOrder}
+              />
+            )}
 
             {/* Order Items */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
@@ -351,6 +306,30 @@ export function VendorOrderManagement() {
 
             {/* Actions */}
             <div className="space-y-3">
+              {orderDispute ? (
+                <button
+                  onClick={() => navigate(`/disputes?disputeId=${orderDispute._id}`)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-50 text-red-700 border border-red-200 rounded-lg hover:bg-red-100 transition-colors font-medium"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  View Dispute ({orderDispute.status})
+                </button>
+              ) : (
+                <button
+                  onClick={() => navigate(`/disputes?orderId=${order._id}`)}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  <MessageSquare className="w-5 h-5" />
+                  Check Disputes For This Order
+                </button>
+              )}
+              <button
+                onClick={() => navigate(`/chat?type=support&orderId=${order._id}`)}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-medium"
+              >
+                <MessageSquare className="w-5 h-5" />
+                Ask Admin Support
+              </button>
               <button
                 onClick={handleDownloadInvoice}
                 className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-colors font-medium"

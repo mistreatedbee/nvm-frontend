@@ -1,20 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
-import { ordersAPI } from '../lib/api';
+import { disputesAPI, ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
+import { connectChatSocket } from '../lib/chatSocket';
+import { useAuthStore } from '../lib/store';
 import toast from 'react-hot-toast';
-import { 
+import {
   Package, 
   Search,
   Filter,
   MapPin,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  RotateCcw,
+  MessageCircle
 } from 'lucide-react';
 
 export function Orders() {
+  const navigate = useNavigate();
+  const { token } = useAuthStore();
+  const lastToastRef = useRef(0);
   const [orders, setOrders] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
@@ -25,6 +32,29 @@ export function Orders() {
   useEffect(() => {
     fetchOrders();
   }, [filterStatus, page]);
+
+  useEffect(() => {
+    if (!token) return;
+    const socket = connectChatSocket(token);
+    if (!socket) return;
+
+    const onDisputeListUpdate = (payload: { disputeId?: string; event?: string }) => {
+      const now = Date.now();
+      if (now - lastToastRef.current > 2500) {
+        lastToastRef.current = now;
+        toast('Dispute activity updated');
+      }
+      fetchOrders();
+      if (payload?.disputeId) {
+        // no-op route hint point; user can open disputes from the list action
+      }
+    };
+
+    socket.on('dispute:list-updated', onDisputeListUpdate);
+    return () => {
+      socket.off('dispute:list-updated', onDisputeListUpdate);
+    };
+  }, [token, filterStatus, page]);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -41,6 +71,38 @@ export function Orders() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleReorder = async (orderId: string) => {
+    try {
+      await ordersAPI.reorder(orderId);
+      toast.success('Items added to cart');
+      navigate('/cart');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to reorder');
+    }
+  };
+
+  const handleOpenDispute = async (order: any) => {
+    const reason = window.prompt('Dispute reason (short):');
+    if (!reason) return;
+    const description = window.prompt('Describe the issue in detail:');
+    if (!description) return;
+    try {
+      const created = await disputesAPI.create({ orderId: order._id, reason, description });
+      toast.success('Dispute opened successfully');
+      const disputeId = created?.data?.data?._id;
+      navigate(disputeId ? `/disputes?disputeId=${disputeId}` : '/disputes');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to open dispute');
+    }
+  };
+
+  const resolveOrderVendorId = (order: any) => {
+    const first = order?.items?.[0];
+    const candidate = first?.vendorId || first?.vendor;
+    if (!candidate) return '';
+    return typeof candidate === 'string' ? candidate : (candidate._id || '');
   };
 
   const filteredOrders = orders.filter((order: any) =>
@@ -168,6 +230,36 @@ export function Orders() {
                       <MapPin className="w-4 h-4" />
                       View Tracking
                     </Link>
+                    <button
+                      onClick={() => {
+                        const vendorId = resolveOrderVendorId(order);
+                        if (!vendorId) return toast.error('Vendor chat is unavailable for this order');
+                        navigate(`/chat?vendorId=${vendorId}&orderId=${order._id}&type=order`);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Chat Vendor
+                    </button>
+                    <button
+                      onClick={() => handleReorder(order._id)}
+                      className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white text-sm rounded-lg hover:bg-black transition-colors"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      Reorder
+                    </button>
+                    <button
+                      onClick={() => handleOpenDispute(order)}
+                      className="flex items-center gap-2 px-4 py-2 bg-red-500 text-white text-sm rounded-lg hover:bg-red-600 transition-colors"
+                    >
+                      Open Dispute
+                    </button>
+                    <Link
+                      to="/disputes"
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      View Disputes
+                    </Link>
                   </div>
                 </div>
 
@@ -198,10 +290,11 @@ export function Orders() {
 
                 {/* Order Footer */}
                 <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <div className="text-sm text-gray-600">
+                  <div className="text-sm text-gray-600">
                       <p>
                         Payment: <span className={`font-semibold ${
-                        order.paymentStatus === 'PAID' ? 'text-green-600' : 'text-yellow-600'
+                        order.paymentStatus === 'PAID' ? 'text-green-600' :
+                        order.paymentStatus === 'REJECTED' ? 'text-red-600' : 'text-yellow-600'
                       }`}>
                         {order.paymentStatus}
                       </span>

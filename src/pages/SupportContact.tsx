@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Navbar } from '../components/Navbar';
-import { supportAPI } from '../lib/api';
+import { helpAPI, supportAPI } from '../lib/api';
 import { useAuthStore } from '../lib/store';
 
 const categories = ['TECHNICAL', 'ACCOUNT', 'ORDERS', 'PAYMENTS', 'VENDOR', 'OTHER'];
@@ -20,6 +20,8 @@ export function SupportContact() {
     message: ''
   });
   const [files, setFiles] = useState<File[]>([]);
+  const [suggestions, setSuggestions] = useState<any[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
 
   const handleUpload = async () => {
     if (!files.length) return [];
@@ -54,6 +56,23 @@ export function SupportContact() {
     }
   };
 
+  const loadSuggestions = async () => {
+    setLoadingSuggestions(true);
+    try {
+      const response = await helpAPI.getFaqs({
+        category: form.category === 'VENDOR' ? 'VENDORS' : form.category,
+        q: form.subject || form.message || undefined,
+        page: 1,
+        limit: 4
+      });
+      setSuggestions(response.data?.data || []);
+    } catch {
+      setSuggestions([]);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -68,6 +87,30 @@ export function SupportContact() {
             Ticket created successfully: <span className="font-semibold">{ticketNumber}</span>
           </div>
         )}
+
+        <div className="mb-4 bg-white border border-gray-200 rounded-xl p-4">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <p className="font-semibold text-nvm-dark-900">Quick Help Before You Submit</p>
+            <button onClick={loadSuggestions} className="text-sm text-nvm-green-primary font-semibold">Find Answers</button>
+          </div>
+          <div className="text-sm text-gray-600 mb-2">
+            You can also use <Link to="/help" className="text-nvm-green-primary font-semibold">Help Center</Link> or <Link to="/chat?type=support" className="text-nvm-green-primary font-semibold">Support Chat</Link>.
+          </div>
+          {loadingSuggestions ? (
+            <p className="text-sm text-gray-500">Loading suggested FAQs...</p>
+          ) : suggestions.length ? (
+            <div className="space-y-2">
+              {suggestions.map((item) => (
+                <div key={item._id} className="border border-gray-200 rounded-lg p-3">
+                  <p className="font-medium text-sm text-nvm-dark-900">{item.question}</p>
+                  <p className="text-xs text-gray-500 mt-1">Category: {item.category}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500">No suggestions yet. Click "Find Answers" to search FAQs by your issue.</p>
+          )}
+        </div>
 
         <form onSubmit={submit} className="bg-white border border-gray-200 rounded-xl p-5 space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
-import { supportAPI } from '../lib/api';
+import { helpAPI, supportAPI } from '../lib/api';
 
 export function MySupportTickets() {
   const [loading, setLoading] = useState(true);
@@ -11,6 +11,7 @@ export function MySupportTickets() {
   const [thread, setThread] = useState<any[]>([]);
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [faqSuggestions, setFaqSuggestions] = useState<any[]>([]);
 
   const loadTickets = async () => {
     setLoading(true);
@@ -31,8 +32,15 @@ export function MySupportTickets() {
   const loadTicket = async (ticketNumber: string) => {
     try {
       const response = await supportAPI.getMyTicketByNumber(ticketNumber);
-      setSelected(response.data?.data?.ticket);
+      const ticket = response.data?.data?.ticket;
+      setSelected(ticket);
       setThread(response.data?.data?.messages || []);
+      const faqRes = await helpAPI.getFaqs({
+        category: ticket?.category === 'VENDOR' ? 'VENDORS' : ticket?.category,
+        page: 1,
+        limit: 3
+      });
+      setFaqSuggestions(faqRes.data?.data || []);
     } catch (err: any) {
       toast.error(err?.response?.data?.message || 'Could not load ticket');
     }
@@ -105,6 +113,26 @@ export function MySupportTickets() {
                     <button disabled={sending || !message.trim()} onClick={sendMessage} className="px-4 py-2 h-fit rounded-lg bg-nvm-green-primary text-white font-semibold disabled:opacity-70">
                       {sending ? 'Sending...' : 'Send'}
                     </button>
+                  </div>
+                  <div className="mt-4 bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-sm font-semibold text-gray-800">Related Help</p>
+                      <div className="flex items-center gap-3">
+                        <Link to="/help" className="text-xs text-nvm-green-primary font-semibold">Help Center</Link>
+                        <Link to="/chat?type=support" className="text-xs text-nvm-green-primary font-semibold">Support Chat</Link>
+                      </div>
+                    </div>
+                    {!faqSuggestions.length ? (
+                      <p className="text-xs text-gray-500">No related FAQs found for this ticket category.</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {faqSuggestions.map((faq) => (
+                          <div key={faq._id} className="text-xs text-gray-700 border border-gray-200 bg-white rounded px-2 py-1.5">
+                            {faq.question}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </>
               ) : (

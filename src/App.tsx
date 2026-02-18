@@ -46,6 +46,9 @@ import { VendorInvoices } from './pages/VendorInvoices';
 import { VendorTransactions } from './pages/VendorTransactions';
 import { AdminInvoices } from './pages/AdminInvoices';
 import { AdminReviews } from './pages/AdminReviews';
+import { AdminPaymentProofs } from './pages/AdminPaymentProofs';
+import { AdminDisputes } from './pages/AdminDisputes';
+import { Disputes } from './pages/Disputes';
 import { KnowledgeHubHome } from './pages/KnowledgeHubHome';
 import { KnowledgeArticlesPage } from './pages/KnowledgeArticlesPage';
 import { KnowledgeArticleDetailPage } from './pages/KnowledgeArticleDetailPage';
@@ -126,6 +129,9 @@ function App() {
         <Route path="/admin/orders" element={<AdminOrders />} />
         <Route path="/admin/invoices" element={<AdminInvoices />} />
         <Route path="/admin/reviews" element={<AdminReviews />} />
+        <Route path="/admin/payments" element={<AdminPaymentProofs />} />
+        <Route path="/admin/disputes" element={<AdminDisputes />} />
+        <Route path="/admin/disputes/:id" element={<Disputes />} />
         <Route path="/admin/vendors" element={<AdminVendorManagement />} />
         
         {/* Vendor Routes */}
@@ -139,6 +145,7 @@ function App() {
         
         {/* Order Tracking & Invoice */}
         <Route path="/orders" element={<Orders />} />
+        <Route path="/disputes" element={<Disputes />} />
         <Route path="/orders/:orderId/track" element={<OrderTracking />} />
         <Route path="/orders/:orderId/invoice" element={<OrderInvoice />} />
         <Route path="/customer/invoices" element={<CustomerInvoices />} />

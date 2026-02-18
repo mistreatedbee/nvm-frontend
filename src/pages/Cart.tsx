@@ -2,21 +2,18 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
-import { useAuthStore, useCartStore } from '../lib/store';
+import { useCartStore } from '../lib/store';
 import { formatRands } from '../lib/currency';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export function Cart() {
   const navigate = useNavigate();
-  const { isAuthenticated } = useAuthStore();
   const { items, removeItem, updateQuantity, getTotal, clearCart, syncFromServer, syncing } = useCartStore();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      syncFromServer().catch(() => {});
-    }
-  }, [isAuthenticated, syncFromServer]);
+    syncFromServer().catch(() => {});
+  }, [syncFromServer]);
 
   const subtotal = getTotal();
   const shipping = items.length > 0 ? 50 : 0;

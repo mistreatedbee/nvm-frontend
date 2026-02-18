@@ -1,12 +1,12 @@
 ﻿import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Navbar } from '../components/Navbar';
 import { useCartStore, useAuthStore } from '../lib/store';
-import { cartAPI, ordersAPI } from '../lib/api';
+import { addressesAPI, cartAPI, checkoutAPI, helpAPI, ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
-import { CreditCard, MapPin, CheckCircle } from 'lucide-react';
+import { FileText, MapPin, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface CheckoutForm {
@@ -17,7 +17,6 @@ interface CheckoutForm {
   state: string;
   country: string;
   zipCode: string;
-  paymentMethod: string;
 }
 
 export function Checkout() {
@@ -28,6 +27,19 @@ export function Checkout() {
   const [loadingCart, setLoadingCart] = useState(true);
   const [step, setStep] = useState<'info' | 'payment' | 'success'>('info');
   const [cartItems, setCartItems] = useState<any[]>([]);
+  const [createdOrderId, setCreatedOrderId] = useState('');
+  const [createdInvoices, setCreatedInvoices] = useState<any[]>([]);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoDiscount, setPromoDiscount] = useState(0);
+  const [appliedPromoCode, setAppliedPromoCode] = useState('');
+  const [giftCardCode, setGiftCardCode] = useState('');
+  const [giftCardApplied, setGiftCardApplied] = useState(0);
+  const [appliedGiftCardCode, setAppliedGiftCardCode] = useState('');
+  const [saveAddressForNextTime, setSaveAddressForNextTime] = useState(false);
+  const [checkoutError, setCheckoutError] = useState('');
+  const [helpSuggestions, setHelpSuggestions] = useState<any[]>([]);
 
   const {
     register,
@@ -36,11 +48,6 @@ export function Checkout() {
   } = useForm<CheckoutForm>();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      navigate('/login');
-      return;
-    }
-
     const loadCart = async () => {
       setLoadingCart(true);
       try {
@@ -61,17 +68,38 @@ export function Checkout() {
     loadCart();
   }, [isAuthenticated, navigate]);
 
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    addressesAPI.get().then((res) => {
+      const addresses = res.data?.data?.addresses || [];
+      setSavedAddresses(addresses);
+      const defaultAddress = addresses.find((address: any) => address.isDefault);
+      if (defaultAddress?._id) {
+        setSelectedAddressId(defaultAddress._id);
+      }
+    }).catch(() => {});
+  }, [isAuthenticated]);
+
   const subtotal = useMemo(
     () => cartItems.reduce((sum, item) => sum + Number(item.priceSnapshot || 0) * Number(item.qty || 0), 0),
     [cartItems]
   );
   const shipping = cartItems.length ? 50 : 0;
   const tax = subtotal * 0.15;
-  const total = subtotal + shipping + tax;
+  const totalBeforeDiscount = subtotal + shipping + tax;
+  const totalDiscount = Math.min(totalBeforeDiscount, promoDiscount + giftCardApplied);
+  const total = Math.max(0, totalBeforeDiscount - totalDiscount);
 
   const onSubmit = async (data: CheckoutForm) => {
     setLoading(true);
+    setCheckoutError('');
+    setHelpSuggestions([]);
     try {
+      if (!isAuthenticated) {
+        toast.error('Please log in to place your order');
+        navigate('/login');
+        return;
+      }
       const freshCartRes = await cartAPI.get();
       const freshCartItems = freshCartRes.data?.data?.items || [];
       if (!freshCartItems.length) {
@@ -80,38 +108,106 @@ export function Checkout() {
         return;
       }
 
+      let shippingAddressPayload: any = {
+        fullName: data.fullName,
+        phone: data.phone,
+        street: data.street,
+        city: data.city,
+        state: data.state,
+        country: data.country || 'South Africa',
+        zipCode: data.zipCode,
+      };
+      if (selectedAddressId) {
+        const selected = savedAddresses.find((address: any) => String(address._id) === String(selectedAddressId));
+        if (selected) {
+          shippingAddressPayload = {
+            fullName: selected.name,
+            phone: selected.phone,
+            street: selected.addressLine1,
+            city: selected.city,
+            state: selected.province,
+            country: data.country || 'South Africa',
+            zipCode: selected.postalCode
+          };
+        }
+      }
+
       const orderData = {
         items: freshCartItems.map((item: any) => ({
           product: item.productId,
           quantity: item.qty,
           price: item.priceSnapshot,
         })),
-        shippingAddress: {
-          fullName: data.fullName,
-          phone: data.phone,
-          street: data.street,
-          city: data.city,
-          state: data.state,
-          country: data.country || 'South Africa',
-          zipCode: data.zipCode,
-        },
-        paymentMethod: data.paymentMethod,
+        shippingAddress: shippingAddressPayload,
+        billingAddress: shippingAddressPayload,
+        paymentMethod: 'INVOICE',
+        promoCode: appliedPromoCode || undefined,
+        giftCardCode: appliedGiftCardCode || undefined
       };
 
-      await ordersAPI.create(orderData);
+      const orderRes = await ordersAPI.create(orderData);
+      setCreatedOrderId(orderRes.data?.data?._id || '');
+      setCreatedInvoices(orderRes.data?.invoices || []);
+
+      if (isAuthenticated && saveAddressForNextTime && !selectedAddressId) {
+        await addressesAPI.add({
+          label: 'Checkout',
+          name: shippingAddressPayload.fullName,
+          phone: shippingAddressPayload.phone,
+          addressLine1: shippingAddressPayload.street,
+          city: shippingAddressPayload.city,
+          province: shippingAddressPayload.state,
+          postalCode: shippingAddressPayload.zipCode,
+          isDefault: savedAddresses.length === 0
+        });
+      }
 
       await cartAPI.clear();
       await clearLocalCart();
       setStep('success');
-      toast.success('Order placed successfully!');
-
-      setTimeout(() => {
-        navigate('/customer/dashboard');
-      }, 3000);
+      toast.success('Order placed. Invoice generated.');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to place order');
+      const message = error.response?.data?.message || 'Failed to place order';
+      setCheckoutError(message);
+      toast.error(message);
+      try {
+        const normalized = String(message).toLowerCase();
+        const category = /(payment|invoice|eft|proof|card)/i.test(normalized) ? 'PAYMENTS' : 'ORDERS';
+        const faqRes = await helpAPI.getFaqs({ q: message, category, page: 1, limit: 4 });
+        setHelpSuggestions(faqRes.data?.data || []);
+      } catch {
+        setHelpSuggestions([]);
+      }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const applyPromo = async () => {
+    try {
+      if (!promoCode.trim()) return;
+      const res = await checkoutAPI.applyPromo(promoCode.trim(), subtotal);
+      setPromoDiscount(Number(res.data?.data?.discount || 0));
+      setAppliedPromoCode(String(res.data?.data?.code || promoCode.trim().toUpperCase()));
+      toast.success('Promo code applied');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Promo code invalid');
+      setPromoDiscount(0);
+      setAppliedPromoCode('');
+    }
+  };
+
+  const applyGiftCard = async () => {
+    try {
+      if (!giftCardCode.trim()) return;
+      const res = await checkoutAPI.redeemGiftCard(giftCardCode.trim(), Math.max(0, totalBeforeDiscount - promoDiscount));
+      setGiftCardApplied(Number(res.data?.data?.applied || 0));
+      setAppliedGiftCardCode(giftCardCode.trim().toUpperCase());
+      toast.success('Gift card applied');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Gift card invalid');
+      setGiftCardApplied(0);
+      setAppliedGiftCardCode('');
     }
   };
 
@@ -148,14 +244,26 @@ export function Checkout() {
           </motion.div>
           <h2 className="text-3xl font-bold text-nvm-dark-900 mb-4">Order Successful!</h2>
           <p className="text-gray-600 mb-8">
-            Thank you for your purchase. You&apos;ll receive an order confirmation email shortly.
+            Your order was created with Invoice Payment (Manual EFT). Download your invoice and upload proof of payment after transfer.
           </p>
-          <button
-            onClick={() => navigate('/customer/dashboard')}
-            className="px-8 py-3 min-h-[44px] bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-colors"
-          >
-            View Orders
-          </button>
+          <div className="space-y-3">
+            {createdInvoices.find((inv) => inv.type === 'CUSTOMER') && (
+              <Link
+                to="/customer/invoices"
+                className="block px-8 py-3 min-h-[44px] bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-colors"
+              >
+                View/Download Invoice
+              </Link>
+            )}
+            {createdOrderId && (
+              <button
+                onClick={() => navigate(`/orders/${createdOrderId}/track`)}
+                className="px-8 py-3 min-h-[44px] bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Go To Order & Upload POP
+              </button>
+            )}
+          </div>
         </motion.div>
       </div>
     );
@@ -177,6 +285,26 @@ export function Checkout() {
           <p className="text-gray-600">Complete your order</p>
         </motion.div>
 
+        {!!checkoutError && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
+            <p className="text-sm text-red-800 font-semibold mb-1">Checkout issue: {checkoutError}</p>
+            <p className="text-sm text-red-700 mb-2">
+              You can check related guidance below, open <Link to="/help" className="underline font-semibold">Help Center</Link>, or contact <Link to="/support" className="underline font-semibold">Support</Link>.
+            </p>
+            {!helpSuggestions.length ? (
+              <p className="text-xs text-red-700">No specific FAQ suggestions found yet.</p>
+            ) : (
+              <div className="space-y-1">
+                {helpSuggestions.map((faq) => (
+                  <div key={faq._id} className="text-xs text-red-900 bg-white border border-red-100 rounded px-2 py-1.5">
+                    {faq.question}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -193,11 +321,29 @@ export function Checkout() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {isAuthenticated && savedAddresses.length > 0 && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Use Saved Address</label>
+                      <select
+                        value={selectedAddressId}
+                        onChange={(e) => setSelectedAddressId(e.target.value)}
+                        className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg"
+                      >
+                        <option value="">Enter a new address</option>
+                        {savedAddresses.map((address: any) => (
+                          <option key={address._id} value={address._id}>
+                            {address.label || address.name} - {address.addressLine1}, {address.city}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
                     <input
                       type="text"
                       {...register('fullName', { required: 'Name is required' })}
+                      disabled={Boolean(selectedAddressId)}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="John Doe"
                     />
@@ -209,6 +355,7 @@ export function Checkout() {
                     <input
                       type="tel"
                       {...register('phone', { required: 'Phone is required' })}
+                      disabled={Boolean(selectedAddressId)}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="+27 12 345 6789"
                     />
@@ -220,6 +367,7 @@ export function Checkout() {
                     <input
                       type="text"
                       {...register('street', { required: 'Address is required' })}
+                      disabled={Boolean(selectedAddressId)}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="123 Main Street"
                     />
@@ -231,6 +379,7 @@ export function Checkout() {
                     <input
                       type="text"
                       {...register('city', { required: 'City is required' })}
+                      disabled={Boolean(selectedAddressId)}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="Johannesburg"
                     />
@@ -242,6 +391,7 @@ export function Checkout() {
                     <input
                       type="text"
                       {...register('state', { required: 'Province is required' })}
+                      disabled={Boolean(selectedAddressId)}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="Gauteng"
                     />
@@ -253,11 +403,24 @@ export function Checkout() {
                     <input
                       type="text"
                       {...register('zipCode', { required: 'Postal code is required' })}
+                      disabled={Boolean(selectedAddressId)}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
                       placeholder="2000"
                     />
                     {errors.zipCode && <p className="mt-1 text-sm text-red-600">{errors.zipCode.message}</p>}
                   </div>
+                  {isAuthenticated && !selectedAddressId && (
+                    <div className="md:col-span-2">
+                      <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={saveAddressForNextTime}
+                          onChange={(e) => setSaveAddressForNextTime(e.target.checked)}
+                        />
+                        Save this address for next checkout
+                      </label>
+                    </div>
+                  )}
                 </div>
               </motion.div>
 
@@ -269,38 +432,49 @@ export function Checkout() {
               >
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 bg-nvm-gold-100 rounded-lg flex items-center justify-center">
-                    <CreditCard className="w-5 h-5 text-nvm-gold-600" />
+                    <FileText className="w-5 h-5 text-nvm-gold-600" />
                   </div>
                   <h2 className="text-xl font-display font-bold">Payment Method</h2>
                 </div>
 
                 <div className="space-y-3">
-                  <label className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-nvm-green-500 transition-colors">
-                    <input
-                      type="radio"
-                      value="stripe"
-                      {...register('paymentMethod', { required: true })}
-                      className="w-5 h-5 text-nvm-green-500"
-                    />
+                  <div className="flex items-center p-4 border-2 border-nvm-green-400 bg-nvm-green-50 rounded-lg">
+                    <div className="w-5 h-5 rounded-full border-4 border-nvm-green-primary bg-white" />
                     <div className="ml-4">
-                      <p className="font-semibold">Credit/Debit Card</p>
-                      <p className="text-sm text-gray-500">Pay securely with Stripe</p>
+                      <p className="font-semibold">Pay via Invoice (Manual EFT)</p>
+                      <p className="text-sm text-gray-600">Invoice is generated instantly with vendor banking details.</p>
                     </div>
-                  </label>
-
-                  <label className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-nvm-green-500 transition-colors">
-                    <input
-                      type="radio"
-                      value="cash-on-delivery"
-                      {...register('paymentMethod', { required: true })}
-                      className="w-5 h-5 text-nvm-green-500"
-                    />
-                    <div className="ml-4">
-                      <p className="font-semibold">Cash on Delivery</p>
-                      <p className="text-sm text-gray-500">Pay when you receive</p>
-                    </div>
-                  </label>
+                  </div>
                 </div>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.15 }}
+                className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-4"
+              >
+                <h2 className="text-xl font-display font-bold">Discounts</h2>
+                <div className="flex gap-2">
+                  <input
+                    value={promoCode}
+                    onChange={(e) => setPromoCode(e.target.value)}
+                    placeholder="Promo code"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg"
+                  />
+                  <button type="button" onClick={applyPromo} className="px-4 py-3 bg-gray-900 text-white rounded-lg">Apply</button>
+                </div>
+                {appliedPromoCode && <p className="text-sm text-green-700">Applied promo: {appliedPromoCode} (-{formatRands(promoDiscount)})</p>}
+                <div className="flex gap-2">
+                  <input
+                    value={giftCardCode}
+                    onChange={(e) => setGiftCardCode(e.target.value)}
+                    placeholder="Gift card code"
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg"
+                  />
+                  <button type="button" onClick={applyGiftCard} className="px-4 py-3 bg-gray-900 text-white rounded-lg">Redeem</button>
+                </div>
+                {appliedGiftCardCode && <p className="text-sm text-green-700">Applied gift card: {appliedGiftCardCode} (-{formatRands(giftCardApplied)})</p>}
               </motion.div>
 
               <button
@@ -351,6 +525,10 @@ export function Checkout() {
                 <div className="flex justify-between text-gray-600">
                   <span>VAT (15%)</span>
                   <span className="font-semibold">{formatRands(tax)}</span>
+                </div>
+                <div className="flex justify-between text-gray-600">
+                  <span>Discounts</span>
+                  <span className="font-semibold">-{formatRands(totalDiscount)}</span>
                 </div>
                 <div className="border-t border-gray-200 pt-3">
                   <div className="flex justify-between items-center">

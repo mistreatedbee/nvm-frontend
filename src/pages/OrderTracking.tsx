@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
-import { ordersAPI } from '../lib/api';
+import { PaymentProofUpload } from '../components/PaymentProofUpload';
+import { helpAPI, invoicesAPI, ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
 import { ArrowLeft, Clock, Package, Truck } from 'lucide-react';
@@ -13,6 +14,9 @@ export function OrderTracking() {
   const [error, setError] = useState('');
   const [order, setOrder] = useState<any>(null);
   const [timeline, setTimeline] = useState<any[]>([]);
+  const [paymentProofData, setPaymentProofData] = useState<any>(null);
+  const [customerInvoice, setCustomerInvoice] = useState<any>(null);
+  const [helpSuggestions, setHelpSuggestions] = useState<any[]>([]);
 
   useEffect(() => {
     if (!orderId) return;
@@ -22,13 +26,28 @@ export function OrderTracking() {
   const loadOrder = async () => {
     setLoading(true);
     setError('');
+    setHelpSuggestions([]);
     try {
       const response = await ordersAPI.getMyOrderById(orderId!);
       setOrder(response.data.data?.order || null);
       setTimeline(response.data.data?.timeline || []);
+      const [proofRes, invoiceRes] = await Promise.all([
+        ordersAPI.getMyPaymentProof(orderId!),
+        invoicesAPI.getData(orderId!)
+      ]);
+      setPaymentProofData(proofRes.data?.data || null);
+      const customerInv = (invoiceRes.data?.data || []).find((inv: any) => inv.type === 'CUSTOMER') || null;
+      setCustomerInvoice(customerInv);
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load order tracking');
+      const message = err.response?.data?.message || 'Failed to load order tracking';
+      setError(message);
       toast.error('Failed to load order tracking');
+      try {
+        const faqRes = await helpAPI.getFaqs({ q: message, category: 'ORDERS', page: 1, limit: 4 });
+        setHelpSuggestions(faqRes.data?.data || []);
+      } catch {
+        setHelpSuggestions([]);
+      }
     } finally {
       setLoading(false);
     }
@@ -46,6 +65,12 @@ export function OrderTracking() {
     });
     return [...map.values()];
   }, [order]);
+  const firstVendorId = useMemo(() => {
+    const first = order?.items?.[0];
+    const candidate = first?.vendorId || first?.vendor;
+    if (!candidate) return '';
+    return typeof candidate === 'string' ? candidate : (candidate._id || '');
+  }, [order]);
 
   if (loading) {
     return (
@@ -62,6 +87,20 @@ export function OrderTracking() {
         <Navbar />
         <div className="max-w-5xl mx-auto px-4 py-16 text-center">
           <p className="text-red-600 mb-4">{error || 'Order not found'}</p>
+          {!!helpSuggestions.length && (
+            <div className="mb-4 text-left max-w-2xl mx-auto bg-white border border-red-100 rounded-lg p-4">
+              <p className="text-sm font-semibold text-gray-900 mb-2">Recommended Help</p>
+              <div className="space-y-1">
+                {helpSuggestions.map((faq) => (
+                  <div key={faq._id} className="text-xs text-gray-700">{faq.question}</div>
+                ))}
+              </div>
+              <div className="mt-3 text-xs">
+                <Link to="/help" className="text-nvm-green-primary font-semibold underline mr-3">Help Center</Link>
+                <Link to="/support" className="text-nvm-green-primary font-semibold underline">Contact Support</Link>
+              </div>
+            </div>
+          )}
           <button
             onClick={() => navigate('/orders')}
             className="px-5 py-2 bg-nvm-green-primary text-white rounded-lg"
@@ -99,6 +138,60 @@ export function OrderTracking() {
               <p className="text-sm text-gray-500">Payment: {order.paymentStatus}</p>
             </div>
           </div>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {firstVendorId && (
+              <button
+                onClick={() => navigate(`/chat?vendorId=${firstVendorId}&orderId=${order._id}&type=order`)}
+                className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
+              >
+                Chat Vendor
+              </button>
+            )}
+            <Link to={`/disputes?orderId=${order._id}`} className="px-3 py-2 rounded-lg border border-red-200 text-red-700 text-sm hover:bg-red-50">
+              Open/View Dispute
+            </Link>
+            <Link to="/help" className="px-3 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">
+              Help Center
+            </Link>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <div className="bg-white rounded-xl border border-gray-100 p-6">
+            <h3 className="font-semibold mb-3">Invoice</h3>
+            {customerInvoice ? (
+              <div className="space-y-2">
+                <p className="text-sm text-gray-700">Invoice #{customerInvoice.invoiceNumber}</p>
+                <button
+                  onClick={async () => {
+                    const response = await invoicesAPI.downloadMyPdf(customerInvoice._id);
+                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.setAttribute('download', `${customerInvoice.invoiceNumber}.pdf`);
+                    document.body.appendChild(link);
+                    link.click();
+                    link.remove();
+                  }}
+                  className="px-4 py-2 bg-nvm-green-primary text-white rounded-lg"
+                >
+                  Download Invoice
+                </button>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500">Invoice not available yet.</p>
+            )}
+          </div>
+          <PaymentProofUpload
+            orderId={order._id}
+            existingProof={paymentProofData?.proof ? {
+              url: paymentProofData.proof.fileUrl,
+              uploadedAt: paymentProofData.proof.uploadedAt
+            } : undefined}
+            paymentStatus={paymentProofData?.paymentStatus || order.paymentStatus}
+            rejectionReason={paymentProofData?.rejectionReason || ''}
+            onUploadSuccess={() => { void loadOrder(); }}
+          />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

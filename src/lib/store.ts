@@ -100,8 +100,6 @@ export const useCartStore = create<CartState>()(
 
         set({ items: optimistic });
 
-        if (!hasToken()) return;
-
         try {
           const res = await cartAPI.add(item.productId, item.quantity);
           set({ items: mapServerCartItems(res.data?.data?.items || []) });
@@ -113,8 +111,6 @@ export const useCartStore = create<CartState>()(
       removeItem: async (productId) => {
         const previous = get().items;
         set({ items: previous.filter((i) => i.productId !== productId) });
-
-        if (!hasToken()) return;
 
         try {
           const res = await cartAPI.remove(productId);
@@ -137,8 +133,6 @@ export const useCartStore = create<CartState>()(
           ),
         });
 
-        if (!hasToken()) return;
-
         try {
           const res = await cartAPI.update(productId, quantity);
           set({ items: mapServerCartItems(res.data?.data?.items || []) });
@@ -151,8 +145,6 @@ export const useCartStore = create<CartState>()(
         const previous = get().items;
         set({ items: [] });
 
-        if (!hasToken()) return;
-
         try {
           const res = await cartAPI.clear();
           set({ items: mapServerCartItems(res.data?.data?.items || []) });
@@ -162,7 +154,6 @@ export const useCartStore = create<CartState>()(
         }
       },
       syncFromServer: async () => {
-        if (!hasToken()) return;
         set({ syncing: true });
         try {
           const res = await cartAPI.get();

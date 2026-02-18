@@ -12,7 +12,7 @@ import { VendorCard } from '../components/VendorCard';
 import { ProductCard } from '../components/ProductCard';
 import { RecentlyViewedSection } from '../components/RecentlyViewedSection';
 import { PatternOverlay } from '../components/PatternOverlay';
-import { productsAPI, vendorsAPI } from '../lib/api';
+import { productsAPI, recommendationsAPI, vendorsAPI } from '../lib/api';
 import { useAuthStore } from '../lib/store';
 import { ArrowRight, TrendingUp, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -23,21 +23,28 @@ export function MarketplaceHome() {
   const [apiFeaturedProducts, setApiFeaturedProducts] = useState([]);
   const [apiTrendingProducts, setApiTrendingProducts] = useState([]);
   const [apiVendors, setApiVendors] = useState([]);
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     // Fetch public data for guest/customer browsing.
     const fetchData = async () => {
       try {
-        const [featuredRes, trendingRes, vendorsRes] = await Promise.all([
+        const [featuredRes, trendingRes, newRes, vendorsRes] = await Promise.all([
           productsAPI.getFeatured(),
           productsAPI.getTrending({ range: '7d', limit: 8 }),
+          productsAPI.getNewArrivals({ limit: 8 }),
           vendorsAPI.getAll({ limit: 4 })
         ]);
 
         setApiFeaturedProducts(featuredRes.data.data || []);
         setApiTrendingProducts(trendingRes.data.data || []);
+        setNewArrivals(newRes.data.data || []);
         setApiVendors(vendorsRes.data.data || []);
+        if (isAuthenticated) {
+          recommendationsAPI.get({ limit: 8 }).then((res) => setRecommendedProducts(res.data.data || [])).catch(() => {});
+        }
       } catch (error) {
         console.error('Failed to fetch homepage marketplace data:', error);
       } finally {
@@ -45,7 +52,7 @@ export function MarketplaceHome() {
       }
     };
     fetchData();
-  }, []);
+  }, [isAuthenticated]);
 
   const displayProducts = apiFeaturedProducts;
   const trendingProducts = apiTrendingProducts;
@@ -192,6 +199,40 @@ export function MarketplaceHome() {
             </div>
           )}
         </section>
+
+        <section>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">New Arrivals</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">Latest published products from active vendors.</p>
+          </motion.div>
+          {newArrivals.length === 0 ? (
+            <div className="bg-white border rounded-lg text-center py-10 text-gray-500">No new arrivals yet.</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {newArrivals.slice(0, 8).map((product: any, index: number) => (
+                <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {isAuthenticated && (
+          <section>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
+              <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">Recommended For You</h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">Based on your recently viewed categories and brands.</p>
+            </motion.div>
+            {recommendedProducts.length === 0 ? (
+              <div className="bg-white border rounded-lg text-center py-10 text-gray-500">No recommendations yet.</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {recommendedProducts.slice(0, 8).map((product: any, index: number) => (
+                  <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
 
         {isAuthenticated && (
           <RecentlyViewedSection title="Recently Viewed" limit={8} />

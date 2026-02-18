@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
-import { Loader2, MessageCircle, Plus, Send, Users, X } from 'lucide-react';
+import { FileText, Loader2, MessageCircle, Paperclip, Plus, Send, Users, X } from 'lucide-react';
 import { Navbar } from '../components/Navbar';
 import { chatAPI } from '../lib/api';
 import { connectChatSocket, disconnectChatSocket, getChatSocket } from '../lib/chatSocket';
@@ -46,6 +46,7 @@ export function ChatInbox() {
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [messageInput, setMessageInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [attachmentFile, setAttachmentFile] = useState<File | null>(null);
   const [typingLabel, setTypingLabel] = useState('');
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [creatingChat, setCreatingChat] = useState(false);
@@ -343,16 +344,33 @@ export function ChatInbox() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageInput.trim() || !selectedConversationId || sending) return;
+    if ((!messageInput.trim() && !attachmentFile) || !selectedConversationId || sending) return;
 
     try {
       setSending(true);
+      let attachmentPayload: any = undefined;
+      let messageType: 'text' | 'image' | 'file' = 'text';
+
+      if (attachmentFile) {
+        const data = new FormData();
+        data.append('file', attachmentFile);
+        const uploadRes = await chatAPI.uploadAttachment(data);
+        attachmentPayload = uploadRes.data?.data;
+        if (attachmentPayload?.mimeType?.startsWith?.('image/')) {
+          messageType = 'image';
+        } else {
+          messageType = 'file';
+        }
+      }
+
       await chatAPI.sendMessage({
         conversationId: selectedConversationId,
         messageContent: messageInput.trim(),
-        messageType: 'text'
+        messageType,
+        attachment: attachmentPayload
       });
       setMessageInput('');
+      setAttachmentFile(null);
       const socket = getChatSocket();
       if (socket) {
         socket.emit('chat:typing', { conversationId: selectedConversationId, typing: false });
@@ -495,6 +513,17 @@ export function ChatInbox() {
                             >
                               <div className="text-[11px] opacity-75 mb-1">{message.senderRole}</div>
                               <div className="whitespace-pre-wrap break-words">{message.messageContent}</div>
+                              {message.attachment?.url && (
+                                <a
+                                  href={message.attachment.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className={`mt-2 inline-flex items-center gap-2 text-xs underline ${mine ? 'text-white' : 'text-nvm-green-primary'}`}
+                                >
+                                  <FileText className="w-3 h-3" />
+                                  {message.attachment.fileName || 'View attachment'}
+                                </a>
+                              )}
                               <div className="text-[10px] opacity-70 mt-1 flex justify-between gap-2">
                                 <span>{new Date(message.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                 {mine && <span>{message.readAt ? 'Read' : 'Sent'}</span>}
@@ -514,6 +543,14 @@ export function ChatInbox() {
                 </div>
 
                 <form onSubmit={sendMessage} className="p-3 border-t border-gray-200 bg-white flex items-center gap-2">
+                  <label className="inline-flex items-center justify-center rounded-xl p-2 border border-gray-300 text-gray-600 hover:bg-gray-50 cursor-pointer">
+                    <Paperclip className="w-4 h-4" />
+                    <input
+                      type="file"
+                      className="hidden"
+                      onChange={(e) => setAttachmentFile(e.target.files?.[0] || null)}
+                    />
+                  </label>
                   <input
                     value={messageInput}
                     onChange={(e) => handleTyping(e.target.value)}
@@ -522,13 +559,19 @@ export function ChatInbox() {
                   />
                   <button
                     type="submit"
-                    disabled={sending || !messageInput.trim()}
+                    disabled={sending || (!messageInput.trim() && !attachmentFile)}
                     className="rounded-xl px-4 py-2 bg-nvm-green-primary text-white text-sm font-semibold disabled:opacity-50 inline-flex items-center gap-2"
                   >
                     {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     Send
                   </button>
                 </form>
+                {attachmentFile && (
+                  <div className="px-3 pb-3 text-xs text-gray-600">
+                    Attachment ready: <span className="font-medium">{attachmentFile.name}</span>
+                    <button onClick={() => setAttachmentFile(null)} className="ml-2 underline">Remove</button>
+                  </div>
+                )}
               </>
             )}
           </section>

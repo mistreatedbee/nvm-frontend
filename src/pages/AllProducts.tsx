@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { ProductCard } from '../components/ProductCard';
-import { categoriesAPI, productsAPI } from '../lib/api';
+import { categoriesAPI, searchAPI } from '../lib/api';
 import { Search } from 'lucide-react';
 
 export function AllProducts() {
@@ -18,12 +18,16 @@ export function AllProducts() {
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const q = searchParams.get('q') || '';
   const category = searchParams.get('category') || (categoryFromState || '');
   const minPrice = searchParams.get('minPrice') || '';
   const maxPrice = searchParams.get('maxPrice') || '';
   const sort = searchParams.get('sort') || 'newest';
+  const brand = searchParams.get('brand') || '';
+  const locationFilter = searchParams.get('location') || '';
+  const minRating = searchParams.get('minRating') || '';
 
   useEffect(() => {
     const loadCategories = async () => {
@@ -49,11 +53,14 @@ export function AllProducts() {
       category: category || undefined,
       minPrice: minPrice || undefined,
       maxPrice: maxPrice || undefined,
+      brand: brand || undefined,
+      location: locationFilter || undefined,
+      minRating: minRating || undefined,
       sort,
       page,
       limit: 16
     }),
-    [q, category, minPrice, maxPrice, sort, page]
+    [q, category, minPrice, maxPrice, brand, locationFilter, minRating, sort, page]
   );
 
   useEffect(() => {
@@ -61,7 +68,7 @@ export function AllProducts() {
       setLoading(true);
       setError('');
       try {
-        const res = await productsAPI.search(queryParams);
+        const res = await searchAPI.products(queryParams);
         setProducts(res.data.data || []);
         setTotal(res.data.total || 0);
         setPages(res.data.pages || 1);
@@ -73,6 +80,24 @@ export function AllProducts() {
     };
     load();
   }, [queryParams]);
+
+  useEffect(() => {
+    const handle = setTimeout(async () => {
+      if (!q || q.trim().length < 2) {
+        setSuggestions([]);
+        return;
+      }
+      try {
+        const res = await searchAPI.autocomplete(q, 10);
+        const values = (res.data.data || []).map((item: any) => item.value).filter((value: any) => Boolean(value)) as string[];
+        setSuggestions(Array.from(new Set(values)).slice(0, 10) as string[]);
+      } catch (_error) {
+        setSuggestions([]);
+      }
+    }, 180);
+
+    return () => clearTimeout(handle);
+  }, [q]);
 
   const updateParam = (key: string, value: string) => {
     const next = new URLSearchParams(searchParams);
@@ -98,8 +123,14 @@ export function AllProducts() {
               value={q}
               onChange={(e) => updateParam('q', e.target.value)}
               placeholder="Search by keyword..."
+              list="product-autocomplete"
               className="w-full pl-9 pr-3 py-3 min-h-[44px] border border-gray-300 rounded-lg"
             />
+            <datalist id="product-autocomplete">
+              {suggestions.map((value) => (
+                <option key={value} value={value} />
+              ))}
+            </datalist>
           </div>
           <select value={category} onChange={(e) => updateParam('category', e.target.value)} className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg">
             <option value="">All categories</option>
@@ -109,6 +140,14 @@ export function AllProducts() {
           </select>
           <input value={minPrice} onChange={(e) => updateParam('minPrice', e.target.value)} placeholder="Min price" type="number" min={0} className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg" />
           <input value={maxPrice} onChange={(e) => updateParam('maxPrice', e.target.value)} placeholder="Max price" type="number" min={0} className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg" />
+          <input value={brand} onChange={(e) => updateParam('brand', e.target.value)} placeholder="Brand" className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg" />
+          <input value={locationFilter} onChange={(e) => updateParam('location', e.target.value)} placeholder="Location" className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg" />
+          <select value={minRating} onChange={(e) => updateParam('minRating', e.target.value)} className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg">
+            <option value="">Any rating</option>
+            <option value="4">4+ stars</option>
+            <option value="3">3+ stars</option>
+            <option value="2">2+ stars</option>
+          </select>
           <select value={sort} onChange={(e) => updateParam('sort', e.target.value)} className="px-3 py-3 min-h-[44px] border border-gray-300 rounded-lg md:col-span-2 lg:col-span-1">
             <option value="relevance">Relevance</option>
             <option value="newest">Newest</option>

@@ -1,7 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { vendorOrdersAPI } from '../lib/api';
+import { connectChatSocket } from '../lib/chatSocket';
 import { formatRands } from '../lib/currency';
+import { useAuthStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import { Package, Truck, CheckCircle, XCircle } from 'lucide-react';
 
@@ -16,6 +19,8 @@ const getAllowedNextStatuses = (status: string) => {
 };
 
 export function VendorOrders() {
+  const { token } = useAuthStore();
+  const lastToastRef = useRef(0);
   const [orders, setOrders] = useState<any[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
@@ -24,6 +29,26 @@ export function VendorOrders() {
   useEffect(() => {
     loadOrders();
   }, [statusFilter]);
+
+  useEffect(() => {
+    if (!token) return;
+    const socket = connectChatSocket(token);
+    if (!socket) return;
+
+    const onDisputeListUpdate = () => {
+      const now = Date.now();
+      if (now - lastToastRef.current > 2500) {
+        lastToastRef.current = now;
+        toast('New dispute activity on your orders');
+      }
+      loadOrders();
+    };
+
+    socket.on('dispute:list-updated', onDisputeListUpdate);
+    return () => {
+      socket.off('dispute:list-updated', onDisputeListUpdate);
+    };
+  }, [token, statusFilter]);
 
   const loadOrders = async () => {
     setLoading(true);
@@ -109,6 +134,14 @@ export function VendorOrders() {
                   <div className="text-right text-sm">
                     <p>Customer: {order.customerId?.name || 'N/A'}</p>
                     <p>Total: <span className="font-semibold">{formatRands(order.totals?.total || order.total || 0)}</span></p>
+                    <div className="mt-2 flex flex-wrap justify-end gap-2">
+                      <Link to={`/vendor/orders/${order._id}`} className="px-2.5 py-1.5 rounded border border-gray-300 text-xs hover:bg-gray-50">
+                        Manage Order
+                      </Link>
+                      <Link to={`/disputes?orderId=${order._id}`} className="px-2.5 py-1.5 rounded border border-red-200 text-red-700 text-xs hover:bg-red-50">
+                        Dispute Actions
+                      </Link>
+                    </div>
                   </div>
                 </div>
 

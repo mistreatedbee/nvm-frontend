@@ -6,6 +6,7 @@ import { Navbar } from '../components/Navbar';
 import { ProductReviews } from '../components/ProductReviews';
 import { RecentlyViewedSection } from '../components/RecentlyViewedSection';
 import { productsAPI, recentlyViewedAPI, trackingAPI } from '../lib/api';
+import { ProductCard } from '../components/ProductCard';
 import { useCartStore, useWishlistStore, useAuthStore } from '../lib/store';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
@@ -17,6 +18,9 @@ export function ProductDetail() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [similarProducts, setSimilarProducts] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [newQuestion, setNewQuestion] = useState('');
   
   const { addItem } = useCartStore();
   const { toggleItem, isInWishlist } = useWishlistStore();
@@ -33,6 +37,8 @@ export function ProductDetail() {
       const response = await productsAPI.getById(id!);
       const productData = response.data.data;
       setProduct(productData);
+      productsAPI.getSimilar(productData._id, { limit: 8 }).then((res) => setSimilarProducts(res.data.data || [])).catch(() => {});
+      productsAPI.getQuestions(productData._id, { limit: 10 }).then((res) => setQuestions(res.data.data || [])).catch(() => {});
       trackingAPI.trackProductView({
         productId: productData._id,
         source: 'DIRECT',
@@ -90,6 +96,26 @@ export function ProductDetail() {
       toast.success(next ? 'Added to wishlist!' : 'Removed from wishlist!');
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to update wishlist');
+    }
+  };
+
+  const handleSubmitQuestion = async () => {
+    if (!isAuthenticated) {
+      toast.error('Please login to ask a question');
+      return;
+    }
+    if (!newQuestion.trim()) {
+      toast.error('Question is required');
+      return;
+    }
+    try {
+      await productsAPI.askQuestion(product._id, { question: newQuestion.trim() });
+      setNewQuestion('');
+      const res = await productsAPI.getQuestions(product._id, { limit: 10 });
+      setQuestions(res.data.data || []);
+      toast.success('Question submitted');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to submit question');
     }
   };
 
@@ -291,6 +317,49 @@ export function ProductDetail() {
         {isAuthenticated && (
           <div className="mt-10">
             <RecentlyViewedSection title="Recently Viewed Products" limit={8} excludeProductId={product._id} />
+          </div>
+        )}
+
+        <div className="mt-10 bg-white border rounded-xl p-6">
+          <h3 className="text-xl font-semibold mb-4">Questions & Answers</h3>
+          <div className="flex gap-2 mb-4">
+            <input
+              value={newQuestion}
+              onChange={(e) => setNewQuestion(e.target.value)}
+              placeholder="Ask about this product..."
+              className="flex-1 border rounded-lg px-3 py-2"
+            />
+            <button onClick={handleSubmitQuestion} className="px-4 py-2 bg-nvm-green-primary text-white rounded-lg">
+              Ask
+            </button>
+          </div>
+          {questions.length === 0 ? (
+            <p className="text-sm text-gray-500">No questions yet.</p>
+          ) : (
+            <div className="space-y-4">
+              {questions.map((item: any) => (
+                <div key={item._id} className="border rounded-lg p-3">
+                  <p className="font-medium text-gray-900">{item.question}</p>
+                  <p className="text-xs text-gray-500 mt-1">By {item.userId?.name || 'Customer'}</p>
+                  {item.answer ? (
+                    <p className="mt-2 text-sm text-gray-700"><span className="font-semibold">Answer:</span> {item.answer.answer}</p>
+                  ) : (
+                    <p className="mt-2 text-sm text-gray-500">Awaiting answer</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {similarProducts.length > 0 && (
+          <div className="mt-10">
+            <h3 className="text-2xl font-display font-bold text-nvm-dark-900 mb-4">Similar Products</h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {similarProducts.map((item: any, index: number) => (
+                <ProductCard key={item._id} product={item} index={index} trackingSource="DIRECT" />
+              ))}
+            </div>
           </div>
         )}
       </div>

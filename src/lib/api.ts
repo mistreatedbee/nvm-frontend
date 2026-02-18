@@ -2,6 +2,15 @@ import axios from 'axios';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 
+function getGuestCartSessionId() {
+  const key = 'nvm_cart_session_id';
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const value = `c-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  localStorage.setItem(key, value);
+  return value;
+}
+
 // Create axios instance
 const api = axios.create({
   baseURL: API_URL,
@@ -28,7 +37,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const hadToken = Boolean(localStorage.getItem('token'));
+    if (error.response?.status === 401 && hadToken) {
       // Unauthorized - clear token and redirect to login
       localStorage.removeItem('token');
       localStorage.removeItem('user');
@@ -122,6 +132,11 @@ export const productsAPI = {
   getAll: (params?: any) => api.get('/products', { params }),
   search: (params?: any) => api.get('/products/search', { params }),
   getTrending: (params?: any) => api.get('/products/trending', { params }),
+  getNewArrivals: (params?: any) => api.get('/products/new', { params }),
+  getSimilar: (productId: string, params?: any) => api.get(`/products/${productId}/similar`, { params }),
+  getQuestions: (productId: string, params?: any) => api.get(`/products/${productId}/questions`, { params }),
+  askQuestion: (productId: string, data: { question: string }) => api.post(`/products/${productId}/questions`, data),
+  answerQuestion: (questionId: string, data: { answer: string }) => api.post(`/vendor/questions/${questionId}/answer`, data),
   getMyProducts: (params?: any) => api.get('/vendor/products', { params }),
   getVendorProductById: (productId: string) => api.get(`/vendor/products/${productId}`),
   getAdminProducts: (params?: any) => api.get('/admin/products', { params }),
@@ -156,6 +171,14 @@ export const ordersAPI = {
   getMyOrders: (params?: any) => api.get('/orders/my', { params }),
   getMyOrderById: (orderId: string) => api.get(`/orders/my/${orderId}`),
   getMyOrderTracking: (orderId: string) => api.get(`/orders/my/${orderId}/tracking`),
+  getMyPaymentProof: (orderId: string) => api.get(`/orders/my/${orderId}/payment-proof`),
+  uploadPaymentProof: (orderId: string, formData: FormData) =>
+    api.post(`/orders/${orderId}/payment-proof`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  reorder: (orderId: string) => api.post(`/orders/${orderId}/reorder`),
+  createReturnRequest: (orderId: string, data: any) => api.post(`/orders/${orderId}/returns`, data),
+  getMyReturns: () => api.get('/orders/my/returns'),
   getVendorOrders: (params?: any) => api.get('/orders/vendor/orders', { params }),
   updateStatus: (id: string, data: any) => api.put(`/orders/${id}/status`, data),
   cancel: (id: string, data: any) => api.put(`/orders/${id}/cancel`, data),
@@ -182,6 +205,12 @@ export const adminOrdersAPI = {
     api.patch(`/admin/orders/${orderId}/cancel`, data),
 };
 
+export const adminPaymentProofsAPI = {
+  list: (params?: any) => api.get('/admin/payment-proofs', { params }),
+  approve: (proofId: string) => api.patch(`/admin/payment-proofs/${proofId}/approve`),
+  reject: (proofId: string, note: string) => api.patch(`/admin/payment-proofs/${proofId}/reject`, { note }),
+};
+
 export const dashboardAPI = {
   getAdminOverview: () => api.get('/admin/dashboard/overview'),
   getVendorOverview: () => api.get('/vendor/dashboard/overview'),
@@ -196,11 +225,11 @@ export const wishlistAPI = {
 };
 
 export const cartAPI = {
-  get: () => api.get('/cart'),
-  add: (productId: string, qty = 1) => api.post('/cart/add', { productId, qty }),
-  update: (productId: string, qty: number) => api.post('/cart/update', { productId, qty }),
-  remove: (productId: string) => api.post('/cart/remove', { productId }),
-  clear: () => api.post('/cart/clear'),
+  get: () => api.get('/cart', { headers: { 'x-session-id': getGuestCartSessionId() } }),
+  add: (productId: string, qty = 1) => api.post('/cart/add', { productId, qty }, { headers: { 'x-session-id': getGuestCartSessionId() } }),
+  update: (productId: string, qty: number) => api.post('/cart/update', { productId, qty }, { headers: { 'x-session-id': getGuestCartSessionId() } }),
+  remove: (productId: string) => api.post('/cart/remove', { productId }, { headers: { 'x-session-id': getGuestCartSessionId() } }),
+  clear: () => api.post('/cart/clear', {}, { headers: { 'x-session-id': getGuestCartSessionId() } }),
   merge: (items: Array<{ productId: string; quantity?: number; qty?: number }>) => api.post('/cart/merge', { items }),
 };
 
@@ -302,7 +331,9 @@ export const notificationsAPI = {
 // Payments
 export const paymentsAPI = {
   createIntent: (data: any) => api.post('/payments/create-intent', data),
+  initiatePayFast: (data: { orderId: string }) => api.post('/payments/payfast/initiate', data),
   confirm: (data: any) => api.post('/payments/confirm', data),
+  saveEftProof: (data: { orderId: string; fileUrl: string }) => api.post('/payments/eft/proof', data),
   getMethods: () => api.get('/payments/methods'),
   requestRefund: (data: any) => api.post('/payments/refund', data),
 };
@@ -314,6 +345,10 @@ export const chatAPI = {
   getConversations: (params?: any) => api.get('/chat/conversations', { params }),
   getConversation: (id: string) => api.get(`/chat/conversations/${id}`),
   sendMessage: (data: any) => api.post('/chat/messages', data),
+  uploadAttachment: (formData: FormData) =>
+    api.post('/chat/attachments/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
   getMessages: (params: { conversationId: string; before?: string; limit?: number }) =>
     api.get('/chat/messages', { params }),
   markMessageRead: (messageId: string) => api.patch(`/chat/messages/${messageId}/read`),
@@ -332,6 +367,8 @@ export const chatAPI = {
 
 // Search & Recommendations
 export const searchAPI = {
+  products: (params?: any) => api.get('/search/products', { params }),
+  autocomplete: (q: string, limit?: number) => api.get('/search/autocomplete', { params: { q, limit } }),
   saveSearch: (data: any) => api.post('/search/history', data),
   getHistory: () => api.get('/search/history'),
   clearHistory: () => api.delete('/search/history'),
@@ -375,6 +412,37 @@ export const usersAPI = {
   updateRole: (id: string, data: any) => api.put(`/users/${id}/role`, data),
   delete: (id: string) => api.delete(`/users/${id}`),
   getStats: () => api.get('/users/stats'),
+};
+
+export const recommendationsAPI = {
+  get: (params?: any) => api.get('/recommendations', { params }),
+};
+
+export const wishlistsAPI = {
+  list: () => api.get('/wishlists'),
+  create: (name: string) => api.post('/wishlists', { name }),
+  add: (listId: string, productId: string) => api.post(`/wishlists/${listId}/add`, { productId }),
+  remove: (listId: string, productId: string) => api.post(`/wishlists/${listId}/remove`, { productId }),
+  delete: (listId: string) => api.delete(`/wishlists/${listId}`),
+  move: (data: { productId: string; fromListId: string; toListId: string }) => api.post('/wishlists/move', data),
+};
+
+export const alertsAPI = {
+  list: () => api.get('/alerts'),
+  create: (data: { productId: string; type: 'PRICE_DROP' | 'BACK_IN_STOCK'; targetPrice?: number }) => api.post('/alerts', data),
+  delete: (id: string) => api.delete(`/alerts/${id}`),
+};
+
+export const addressesAPI = {
+  get: () => api.get('/addresses'),
+  add: (data: any) => api.post('/addresses', data),
+  update: (addressId: string, data: any) => api.put(`/addresses/${addressId}`, data),
+  delete: (addressId: string) => api.delete(`/addresses/${addressId}`),
+};
+
+export const checkoutAPI = {
+  applyPromo: (code: string, subtotal: number) => api.post('/checkout/promo/apply', { code, subtotal }),
+  redeemGiftCard: (code: string, total: number) => api.post('/checkout/gift-card/redeem', { code, total }),
 };
 
 export const adminControlAPI = {
@@ -526,4 +594,19 @@ export const supportAPI = {
     api.patch(`/admin/support/tickets/${ticketNumber}/priority`, { priority }),
   adminReply: (ticketNumber: string, data: { message: string; attachments?: any[] }) =>
     api.post(`/admin/support/tickets/${ticketNumber}/reply`, data),
+};
+
+export const disputesAPI = {
+  create: (data: { orderId: string; reason: string; description: string; vendorId?: string; attachments?: any[] }) => api.post('/disputes', data),
+  getMy: (params?: any) => api.get('/disputes/my', { params }),
+  getById: (id: string) => api.get(`/disputes/${id}`),
+  getMessages: (id: string) => api.get(`/disputes/${id}/messages`),
+  sendMessage: (id: string, data: { message?: string; attachments?: any[] }) => api.post(`/disputes/${id}/messages`, data),
+  uploadAttachment: (formData: FormData) =>
+    api.post('/disputes/attachments/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  getAdmin: (params?: any) => api.get('/disputes/admin', { params }),
+  adminUpdate: (id: string, data: { status: 'OPEN' | 'IN_REVIEW' | 'RESOLVED' | 'CLOSED'; resolution?: string }) =>
+    api.patch(`/disputes/admin/${id}`, data),
 };
