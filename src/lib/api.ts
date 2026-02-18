@@ -178,6 +178,11 @@ export const adminOrdersAPI = {
     api.patch(`/admin/orders/${orderId}/cancel`, data),
 };
 
+export const dashboardAPI = {
+  getAdminOverview: () => api.get('/admin/dashboard/overview'),
+  getVendorOverview: () => api.get('/vendor/dashboard/overview'),
+};
+
 // Invoices
 export const invoicesAPI = {
   getMy: (params?: any) => api.get('/invoices/my', { params }),

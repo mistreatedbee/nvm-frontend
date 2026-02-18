@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ArrowRight, ShoppingBag, Store, Sparkles } from 'lucide-react';
-import { vendorsAPI, productsAPI, authAPI } from '../lib/api';
+import { vendorsAPI, productsAPI } from '../lib/api';
 
 export function Hero() {
   const [stats, setStats] = useState({
     vendors: 0,
     products: 0,
-    customers: 0
+    publishedProducts: 0
   });
 
   useEffect(() => {
@@ -17,15 +17,16 @@ export function Hero() {
 
   const fetchStats = async () => {
     try {
-      const [vendorsRes, productsRes] = await Promise.all([
+      const [vendorsRes, productsRes, publishedRes] = await Promise.all([
         vendorsAPI.getAll({ limit: 1 }),
-        productsAPI.getAll({ limit: 1 })
+        productsAPI.getAll({ limit: 1 }),
+        productsAPI.getAll({ status: 'PUBLISHED', limit: 1 })
       ]);
       
       setStats({
         vendors: vendorsRes.data.total || 0,
         products: productsRes.data.total || 0,
-        customers: Math.floor((vendorsRes.data.total || 0) * 100) // Estimate based on vendors
+        publishedProducts: publishedRes.data.total || 0
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -161,9 +162,9 @@ export function Hero() {
               </div>
               <div className="text-center">
                 <div className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-nvm-orange-primary to-nvm-orange-600 bg-clip-text text-transparent">
-                  {stats.customers >= 1000 ? `${(stats.customers / 1000).toFixed(1)}k` : stats.customers}+
+                  {stats.publishedProducts >= 1000 ? `${(stats.publishedProducts / 1000).toFixed(1)}k` : stats.publishedProducts}+
                 </div>
-                <div className="text-sm text-gray-600 font-medium mt-1">Customers</div>
+                <div className="text-sm text-gray-600 font-medium mt-1">Published</div>
               </div>
             </motion.div>
           </motion.div>
