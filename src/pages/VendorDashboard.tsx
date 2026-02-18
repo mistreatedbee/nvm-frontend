@@ -49,32 +49,34 @@ export function VendorDashboard() {
   const fetchVendorData = async () => {
     setLoading(true);
     try {
-      const [vendorRes, productsRes, ordersRes] = await Promise.all([
-        vendorsAPI.getMyProfile(),
-        // Vendors should see/manage their own products, not the public catalog
+      // Fetch vendor profile first so backend can auto-create one for vendor users who don't have a profile yet
+      const vendorRes = await vendorsAPI.getMyProfile();
+      const vendorData = vendorRes.data.data;
+      setVendor(vendorData);
+
+      if (!vendorData?._id) {
+        setLoading(false);
+        return;
+      }
+
+      // Then fetch products and orders (these require an active vendor profile)
+      const [productsRes, ordersRes] = await Promise.all([
         productsAPI.getMyProducts({ limit: 5 }),
         ordersAPI.getVendorOrders({ limit: 5 })
       ]);
-
-      const vendorData = vendorRes.data.data;
-      setVendor(vendorData);
       setProducts(productsRes.data.data || []);
       setOrders(ordersRes.data.data || []);
 
-      // Fetch analytics
-      if (vendorData?._id) {
-        const analyticsRes = await vendorsAPI.getAnalytics(vendorData._id);
-        const raw = analyticsRes.data.data;
-        // Backend returns { overview, products, reviews, ... } — map into the dashboard fields.
-        setAnalytics({
-          totalProducts: raw?.products?.total ?? 0,
-          activeProducts: raw?.products?.active ?? 0,
-          totalSales: raw?.overview?.totalItemsSold ?? 0,
-          totalRevenue: raw?.overview?.totalRevenue ?? 0,
-          rating: raw?.reviews?.averageRating ?? vendorData?.rating ?? 0,
-          totalReviews: raw?.reviews?.total ?? vendorData?.totalReviews ?? 0
-        });
-      }
+      const analyticsRes = await vendorsAPI.getAnalytics(vendorData._id);
+      const raw = analyticsRes.data.data;
+      setAnalytics({
+        totalProducts: raw?.products?.total ?? 0,
+        activeProducts: raw?.products?.active ?? 0,
+        totalSales: raw?.overview?.totalItemsSold ?? 0,
+        totalRevenue: raw?.overview?.totalRevenue ?? 0,
+        rating: raw?.reviews?.averageRating ?? vendorData?.rating ?? 0,
+        totalReviews: raw?.reviews?.total ?? vendorData?.totalReviews ?? 0
+      });
     } catch (error: any) {
       console.error('Error fetching vendor data:', error);
     } finally {
