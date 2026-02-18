@@ -57,6 +57,13 @@ import { AdminPosts } from './pages/AdminPosts';
 import { VendorToolkit } from './pages/VendorToolkit';
 import { AdminPlaybook } from './pages/AdminPlaybook';
 import { AdminControlCenter } from './pages/AdminControlCenter';
+import { HelpCenter } from './pages/HelpCenter';
+import { HelpGuideDetail } from './pages/HelpGuideDetail';
+import { HelpVideoDetail } from './pages/HelpVideoDetail';
+import { SupportContact } from './pages/SupportContact';
+import { MySupportTickets } from './pages/MySupportTickets';
+import { AdminSupportInbox } from './pages/AdminSupportInbox';
+import { AdminHelpCenter } from './pages/AdminHelpCenter';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -76,6 +83,12 @@ function App() {
         <Route path="/posts/:slug" element={<PostDetailPage />} />
         <Route path="/announcements/:slug" element={<PostDetailPage />} />
         <Route path="/blog/:slug" element={<PostDetailPage />} />
+        <Route path="/help" element={<HelpCenter />} />
+        <Route path="/help/guides/:slug" element={<HelpGuideDetail />} />
+        <Route path="/help/videos/:slug" element={<HelpVideoDetail />} />
+        <Route path="/support" element={<SupportContact />} />
+        <Route path="/help/contact" element={<SupportContact />} />
+        <Route path="/support/my" element={<MySupportTickets />} />
         
         {/* Auth Routes */}
         <Route path="/login" element={<Login />} />
@@ -106,6 +119,8 @@ function App() {
         <Route path="/admin/posts" element={<AdminPosts />} />
         <Route path="/admin/playbook" element={<AdminPlaybook />} />
         <Route path="/admin/control-center" element={<AdminControlCenter />} />
+        <Route path="/admin/help" element={<AdminHelpCenter />} />
+        <Route path="/admin/support" element={<AdminSupportInbox />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/orders" element={<AdminOrders />} />

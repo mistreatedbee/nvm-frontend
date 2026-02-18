@@ -474,3 +474,56 @@ export const adminPlaybookAPI = {
   updateLesson: (id: string, data: any) => api.put(`/admin/playbook/lessons/${id}`, data),
   publishLesson: (id: string) => api.patch(`/admin/playbook/lessons/${id}/publish`),
 };
+
+// Help Center (Public)
+export const helpAPI = {
+  getFaqs: (params?: any) => api.get('/help/faqs', { params }),
+  getGuides: (params?: any) => api.get('/help/guides', { params }),
+  getGuideBySlug: (slug: string) => api.get(`/help/guides/${slug}`),
+  getVideos: (params?: any) => api.get('/help/videos', { params }),
+  getVideoBySlug: (slug: string) => api.get(`/help/videos/${slug}`),
+  getGuideProgress: (slug: string) => api.get(`/help/guides/${slug}/progress`),
+  updateGuideProgress: (slug: string, data: { completedSteps: number[] }) => api.put(`/help/guides/${slug}/progress`, data),
+};
+
+// Help Center (Admin)
+export const adminHelpAPI = {
+  listFaqs: (params?: any) => api.get('/admin/help/faqs', { params }),
+  createFaq: (data: any) => api.post('/admin/help/faqs', data),
+  updateFaq: (id: string, data: any) => api.put(`/admin/help/faqs/${id}`, data),
+  publishFaq: (id: string) => api.patch(`/admin/help/faqs/${id}/publish`),
+  unpublishFaq: (id: string, data?: { status?: 'DRAFT' | 'ARCHIVED' }) => api.patch(`/admin/help/faqs/${id}/unpublish`, data || {}),
+  deleteFaq: (id: string) => api.delete(`/admin/help/faqs/${id}`),
+  listGuides: (params?: any) => api.get('/admin/help/guides', { params }),
+  createGuide: (data: any) => api.post('/admin/help/guides', data),
+  updateGuide: (id: string, data: any) => api.put(`/admin/help/guides/${id}`, data),
+  publishGuide: (id: string) => api.patch(`/admin/help/guides/${id}/publish`),
+  unpublishGuide: (id: string, data?: { status?: 'DRAFT' | 'ARCHIVED' }) => api.patch(`/admin/help/guides/${id}/unpublish`, data || {}),
+  deleteGuide: (id: string) => api.delete(`/admin/help/guides/${id}`),
+  listVideos: (params?: any) => api.get('/admin/help/videos', { params }),
+  createVideo: (data: any) => api.post('/admin/help/videos', data),
+  updateVideo: (id: string, data: any) => api.put(`/admin/help/videos/${id}`, data),
+  publishVideo: (id: string) => api.patch(`/admin/help/videos/${id}/publish`),
+  unpublishVideo: (id: string, data?: { status?: 'DRAFT' | 'ARCHIVED' }) => api.patch(`/admin/help/videos/${id}/unpublish`, data || {}),
+  deleteVideo: (id: string) => api.delete(`/admin/help/videos/${id}`),
+};
+
+// Support (Public/User/Admin)
+export const supportAPI = {
+  uploadAttachment: (formData: FormData) =>
+    api.post('/support/attachments/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  createTicket: (data: any) => api.post('/support/tickets', data),
+  getMyTickets: (params?: any) => api.get('/support/tickets/my', { params }),
+  getMyTicketByNumber: (ticketNumber: string) => api.get(`/support/tickets/my/${ticketNumber}`),
+  sendMyTicketMessage: (ticketNumber: string, data: any) => api.post(`/support/tickets/my/${ticketNumber}/message`, data),
+  adminListTickets: (params?: any) => api.get('/admin/support/tickets', { params }),
+  adminGetTicket: (ticketNumber: string) => api.get(`/admin/support/tickets/${ticketNumber}`),
+  adminUpdateStatus: (ticketNumber: string, status: 'OPEN' | 'IN_PROGRESS' | 'RESOLVED' | 'CLOSED') =>
+    api.patch(`/admin/support/tickets/${ticketNumber}/status`, { status }),
+  adminUpdatePriority: (ticketNumber: string, priority: 'LOW' | 'MEDIUM' | 'HIGH') =>
+    api.patch(`/admin/support/tickets/${ticketNumber}/priority`, { priority }),
+  adminReply: (ticketNumber: string, data: { message: string; attachments?: any[] }) =>
+    api.post(`/admin/support/tickets/${ticketNumber}/reply`, data),
+};

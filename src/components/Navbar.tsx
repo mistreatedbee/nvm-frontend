@@ -65,6 +65,9 @@ export function Navbar() {
             <Link to="/blog" className="text-gray-700 hover:text-nvm-green-primary transition">
               Blog
             </Link>
+            <Link to="/help" className="text-gray-700 hover:text-nvm-green-primary transition">
+              Help
+            </Link>
           </div>
 
           {/* Right Side Actions */}
@@ -109,10 +112,26 @@ export function Navbar() {
                     <Link to="/chat" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
                       Messages
                     </Link>
-                    {user?.role === 'admin' && (
-                      <Link to="/admin/chats" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                        Support Chats
+                    <Link to="/support" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                      Support
+                    </Link>
+                    {(user?.role === 'customer' || user?.role === 'vendor') && (
+                      <Link to="/support/my" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                        My Tickets
                       </Link>
+                    )}
+                    {user?.role === 'admin' && (
+                      <>
+                        <Link to="/admin/chats" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                          Support Chats
+                        </Link>
+                        <Link to="/admin/support" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                          Support Inbox
+                        </Link>
+                        <Link to="/admin/help" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
+                          Help Content
+                        </Link>
+                      </>
                     )}
                     <button
                       onClick={handleLogout}
@@ -167,6 +186,9 @@ export function Navbar() {
               <Link to="/blog" className="text-gray-700 hover:text-nvm-green-primary">
                 Blog
               </Link>
+              <Link to="/help" className="text-gray-700 hover:text-nvm-green-primary">
+                Help
+              </Link>
               {isAuthenticated ? (
                 <>
                   <Link to="/cart" className="text-gray-700 hover:text-nvm-green-primary">
@@ -178,6 +200,9 @@ export function Navbar() {
                   <Link to="/chat" className="text-gray-700 hover:text-nvm-green-primary flex items-center gap-2">
                     <MessageSquare className="w-4 h-4" />
                     Messages
+                  </Link>
+                  <Link to="/support" className="text-gray-700 hover:text-nvm-green-primary">
+                    Support
                   </Link>
                   <Link to={user?.role === 'admin' ? '/admin' : user?.role === 'vendor' ? '/vendor/dashboard' : '/customer/dashboard'} className="text-gray-700 hover:text-nvm-green-primary">
                     Dashboard
