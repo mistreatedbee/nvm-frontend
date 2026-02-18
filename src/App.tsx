@@ -74,6 +74,10 @@ import { VendorReviewsManagement } from './pages/VendorReviewsManagement';
 import { AdminCategories } from './pages/AdminCategories';
 import { AdminContentManager } from './pages/AdminContentManager';
 import { AdminAnalyticsOverview } from './pages/AdminAnalyticsOverview';
+import { AdminLogistics } from './pages/AdminLogistics';
+import { VendorLogistics } from './pages/VendorLogistics';
+import { AdminMonetization } from './pages/AdminMonetization';
+import { VendorMonetization } from './pages/VendorMonetization';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -120,6 +124,8 @@ function App() {
         <Route path="/vendor/analytics" element={<VendorAnalytics />} />
         <Route path="/vendor/marketing" element={<VendorMarketing />} />
         <Route path="/vendor/wallet" element={<VendorWallet />} />
+        <Route path="/vendor/logistics" element={<VendorLogistics />} />
+        <Route path="/vendor/monetization" element={<VendorMonetization />} />
         <Route path="/vendor/reviews" element={<VendorReviewsManagement />} />
         <Route path="/vendor/toolkit" element={<VendorToolkit />} />
         <Route path="/vendor/store-profile" element={<VendorStoreProfile />} />
@@ -147,6 +153,8 @@ function App() {
         <Route path="/admin/categories" element={<AdminCategories />} />
         <Route path="/admin/content" element={<AdminContentManager />} />
         <Route path="/admin/analytics" element={<AdminAnalyticsOverview />} />
+        <Route path="/admin/logistics" element={<AdminLogistics />} />
+        <Route path="/admin/monetization" element={<AdminMonetization />} />
         
         {/* Vendor Routes */}
         <Route path="/vendor/register" element={<VendorRegistration />} />

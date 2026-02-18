@@ -75,7 +75,7 @@ export function VendorDashboard() {
           totalReviews: raw?.reviews?.total ?? vendorData?.totalReviews ?? 0
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error fetching vendor data:', error);
     } finally {
       setLoading(false);

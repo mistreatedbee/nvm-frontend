@@ -536,6 +536,55 @@ export const logisticsAPI = {
   vendorPickupPoints: (vendorId: string) => api.get(`/vendors/${vendorId}/pickup-points`),
 };
 
+export const adminLogisticsAPI = {
+  listZones: (params?: any) => api.get('/admin/logistics/zones', { params }),
+  createZone: (data: any) => api.post('/admin/logistics/zones', data),
+  updateZone: (zoneId: string, data: any) => api.put(`/admin/logistics/zones/${zoneId}`, data),
+  activateZone: (zoneId: string, isActive: boolean) => api.patch(`/admin/logistics/zones/${zoneId}/activate`, { isActive }),
+  reorderZones: (orderedIds: string[]) => api.patch('/admin/logistics/zones/reorder', { orderedIds }),
+  listPickupPoints: (params?: any) => api.get('/admin/pickup-points', { params }),
+  createPickupPoint: (data: any) => api.post('/admin/pickup-points', data),
+  updatePickupPoint: (id: string, data: any) => api.put(`/admin/pickup-points/${id}`, data),
+  deletePickupPoint: (id: string) => api.delete(`/admin/pickup-points/${id}`),
+};
+
+export const vendorLogisticsAPI = {
+  getSettings: () => api.get('/vendor/logistics/settings'),
+  updateSettings: (data: any) => api.put('/vendor/logistics/settings', data),
+  listPickupPoints: () => api.get('/vendor/pickup-points'),
+  createPickupPoint: (data: any) => api.post('/vendor/pickup-points', data),
+  updatePickupPoint: (id: string, data: any) => api.put(`/vendor/pickup-points/${id}`, data),
+  deletePickupPoint: (id: string) => api.delete(`/vendor/pickup-points/${id}`),
+};
+
+export const uploadsAPI = {
+  upload: (formData: FormData) =>
+    api.post('/uploads', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+};
+
+export const monetizationAPI = {
+  listPlans: (params?: any) => api.get('/monetization/plans', { params }),
+  listActivePromotedListings: () => api.get('/monetization/promoted-listings/active'),
+  listFeaturedVendors: () => api.get('/monetization/featured-vendors'),
+  createReferralCode: (data: any) => api.post('/monetization/referrals/codes', data),
+  getPlatformSettings: () => api.get('/monetization/admin/platform-settings'),
+  updatePlatformSettings: (data: any) => api.put('/monetization/admin/platform-settings', data),
+  createPlan: (data: any) => api.post('/monetization/admin/plans', data),
+  updatePlan: (id: string, data: any) => api.put(`/monetization/admin/plans/${id}`, data),
+  assignVendorSubscription: (data: any) => api.post('/monetization/admin/vendor-subscriptions', data),
+  listVendorSubscriptions: (params?: any) => api.get('/monetization/admin/vendor-subscriptions', { params }),
+  createPromotedListing: (data: any) => api.post('/monetization/admin/promoted-listings', data),
+  updatePromotedListing: (id: string, data: any) => api.put(`/monetization/admin/promoted-listings/${id}`, data),
+  listPromotedListings: (params?: any) => api.get('/monetization/admin/promoted-listings', { params }),
+  setFeaturedVendor: (data: any) => api.post('/monetization/admin/featured-vendors', data),
+  listAdminFeaturedVendors: (params?: any) => api.get('/monetization/admin/featured-vendors', { params }),
+  listReferralCodes: (params?: any) => api.get('/monetization/admin/referrals/codes', { params }),
+  listReferralEvents: (params?: any) => api.get('/monetization/admin/referrals/events', { params }),
+  approveReferralReward: (id: string) => api.patch(`/monetization/admin/referrals/events/${id}/approve`),
+};
+
 export const adminControlAPI = {
   getActivity: (params?: any) => api.get('/admin/activity', { params }),
   getUsers: (params?: any) => api.get('/admin/users', { params }),
