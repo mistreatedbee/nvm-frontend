@@ -203,6 +203,7 @@ export function AdminDashboard() {
             <Link to="/admin/knowledge" className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary font-semibold flex items-center gap-2"><BookOpen className="w-4 h-4" />Knowledge Hub</Link>
             <Link to="/admin/posts" className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary font-semibold flex items-center gap-2"><Newspaper className="w-4 h-4" />Publications</Link>
             <Link to="/admin/playbook" className="px-4 py-2 bg-white border-2 border-gray-200 text-gray-700 rounded-lg hover:border-nvm-green-primary hover:text-nvm-green-primary font-semibold flex items-center gap-2"><GraduationCap className="w-4 h-4" />Playbook</Link>
+            <Link to="/admin/control-center" className="px-4 py-2 bg-indigo-50 border-2 border-indigo-200 text-indigo-700 rounded-lg hover:border-indigo-300 hover:bg-indigo-100 font-semibold flex items-center gap-2"><Shield className="w-4 h-4" />Control Center</Link>
             <Link to="/admin/chats" className="px-4 py-2 bg-red-50 border-2 border-red-200 text-red-700 rounded-lg hover:border-red-300 hover:bg-red-100 font-semibold flex items-center gap-2"><MessageCircle className="w-4 h-4" />Support Chats</Link>
           </div>
 

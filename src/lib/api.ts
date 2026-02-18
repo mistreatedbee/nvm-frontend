@@ -140,8 +140,10 @@ export const productsAPI = {
   vendorPublish: (productId: string) => api.patch(`/vendor/products/${productId}/publish`),
   adminApprove: (productId: string) => api.patch(`/admin/products/${productId}/approve`),
   adminReject: (productId: string, data: { reason: string }) => api.patch(`/admin/products/${productId}/reject`, data),
-  adminUnpublish: (productId: string, data?: { reasonOptional?: string }) => api.patch(`/admin/products/${productId}/unpublish`, data || {}),
+  adminUnpublish: (productId: string, data: { reason: string }) => api.patch(`/admin/products/${productId}/unpublish`, data),
   adminRepublish: (productId: string) => api.patch(`/admin/products/${productId}/republish`),
+  adminFlag: (productId: string, data: { reason: string; severity?: 'LOW' | 'MEDIUM' | 'HIGH' }) =>
+    api.patch(`/admin/products/${productId}/flag`, data),
   report: (id: string, data: any) => api.post(`/products/${id}/report`, data),
   moderate: (id: string, data: any) => api.put(`/products/${id}/moderate`, data),
 };
@@ -373,6 +375,17 @@ export const usersAPI = {
   updateRole: (id: string, data: any) => api.put(`/users/${id}/role`, data),
   delete: (id: string) => api.delete(`/users/${id}`),
   getStats: () => api.get('/users/stats'),
+};
+
+export const adminControlAPI = {
+  getActivity: (params?: any) => api.get('/admin/activity', { params }),
+  getUsers: (params?: any) => api.get('/admin/users', { params }),
+  getUserActivity: (userId: string, params?: any) => api.get(`/admin/users/${userId}/activity`, { params }),
+  getVendorsCompliance: (params?: any) => api.get('/admin/vendors/compliance', { params }),
+  createComplianceFlag: (vendorId: string, data: { type: string; severity: 'LOW' | 'MEDIUM' | 'HIGH'; note?: string }) =>
+    api.post(`/admin/vendors/${vendorId}/compliance/flag`, data),
+  resolveComplianceFlag: (flagId: string, data?: { note?: string }) => api.patch(`/admin/compliance/${flagId}/resolve`, data || {}),
+  getAuditLogs: (params?: any) => api.get('/admin/audit-logs', { params }),
 };
 
 // Knowledge Hub (Vendor/Public)

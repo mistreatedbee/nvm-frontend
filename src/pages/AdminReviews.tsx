@@ -53,7 +53,9 @@ export function AdminReviews() {
       if (action === 'delete') {
         const ok = window.confirm('Delete this review permanently?');
         if (!ok) return;
-        await reviewsAPI.adminDelete(reviewId);
+        const reason = window.prompt('Delete reason:');
+        if (!reason) return;
+        await reviewsAPI.adminDelete(reviewId, { reason });
       }
       toast.success('Action completed');
       await fetchReviews();

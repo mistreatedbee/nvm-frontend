@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Navbar } from '../components/Navbar';
 import { productsAPI } from '../lib/api';
 import toast from 'react-hot-toast';
@@ -49,7 +49,11 @@ export function AdminProducts() {
         if (!rejectReason.trim()) return toast.error('Rejection reason is required');
         await productsAPI.adminReject(selected._id, { reason: rejectReason.trim() });
       }
-      if (type === 'unpublish') await productsAPI.adminUnpublish(selected._id, {});
+      if (type === 'unpublish') {
+        const reason = window.prompt('Unpublish reason:', 'Policy enforcement');
+        if (!reason) return toast.error('Reason is required');
+        await productsAPI.adminUnpublish(selected._id, { reason });
+      }
       if (type === 'republish') await productsAPI.adminRepublish(selected._id);
       toast.success('Action completed');
       setRejectReason('');
@@ -138,7 +142,7 @@ export function AdminProducts() {
               <div className="space-y-2">
                 {(detail.history || []).map((item: any) => (
                   <div key={item._id} className="border border-gray-200 rounded-lg p-3">
-                    <div className="text-sm font-medium">{item.action} � {item.actorRole}</div>
+                    <div className="text-sm font-medium">{item.action} • {item.actorRole}</div>
                     <div className="text-xs text-gray-600">{new Date(item.createdAt).toLocaleString()}</div>
                     {item.note && <div className="text-sm text-gray-700 mt-1">{item.note}</div>}
                   </div>
@@ -154,3 +158,4 @@ export function AdminProducts() {
     </div>
   );
 }
+

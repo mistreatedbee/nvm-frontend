@@ -56,6 +56,7 @@ import { PostDetailPage } from './pages/PostDetailPage';
 import { AdminPosts } from './pages/AdminPosts';
 import { VendorToolkit } from './pages/VendorToolkit';
 import { AdminPlaybook } from './pages/AdminPlaybook';
+import { AdminControlCenter } from './pages/AdminControlCenter';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -104,6 +105,7 @@ function App() {
         <Route path="/admin/knowledge" element={<AdminKnowledgeHub />} />
         <Route path="/admin/posts" element={<AdminPosts />} />
         <Route path="/admin/playbook" element={<AdminPlaybook />} />
+        <Route path="/admin/control-center" element={<AdminControlCenter />} />
         <Route path="/admin/users" element={<AdminUsers />} />
         <Route path="/admin/products" element={<AdminProducts />} />
         <Route path="/admin/orders" element={<AdminOrders />} />
