@@ -21,7 +21,10 @@ import {
   MessageSquare,
   Bot,
   BookOpen,
-  Wrench
+  Wrench,
+  Wallet,
+  Megaphone,
+  Boxes
 } from 'lucide-react';
 
 export function VendorDashboard() {
@@ -279,6 +282,19 @@ export function VendorDashboard() {
                 </Link>
 
                 <Link
+                  to="/vendor/inventory"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-lime-400 hover:bg-lime-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-lime-100 rounded-lg flex items-center justify-center group-hover:bg-lime-500 transition-colors">
+                    <Boxes className="w-5 h-5 text-lime-700 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">Inventory</p>
+                    <p className="text-sm text-gray-500">Alerts, SKUs, barcodes</p>
+                  </div>
+                </Link>
+
+                <Link
                   to="/vendor/analytics"
                   className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-orange-400 hover:bg-orange-50 transition-all group"
                 >
@@ -288,6 +304,45 @@ export function VendorDashboard() {
                   <div className="ml-4 text-left">
                     <p className="font-semibold text-nvm-dark-900">Analytics</p>
                     <p className="text-sm text-gray-500">View insights</p>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/vendor/marketing"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-pink-400 hover:bg-pink-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-pink-100 rounded-lg flex items-center justify-center group-hover:bg-pink-500 transition-colors">
+                    <Megaphone className="w-5 h-5 text-pink-700 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">Marketing</p>
+                    <p className="text-sm text-gray-500">Coupons, flash sales, ads</p>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/vendor/wallet"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-emerald-400 hover:bg-emerald-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center group-hover:bg-emerald-500 transition-colors">
+                    <Wallet className="w-5 h-5 text-emerald-700 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">Wallet</p>
+                    <p className="text-sm text-gray-500">Balance and payouts</p>
+                  </div>
+                </Link>
+
+                <Link
+                  to="/vendor/reviews"
+                  className="w-full flex items-center p-4 rounded-lg border-2 border-gray-100 hover:border-yellow-400 hover:bg-yellow-50 transition-all group"
+                >
+                  <div className="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center group-hover:bg-yellow-500 transition-colors">
+                    <Star className="w-5 h-5 text-yellow-700 group-hover:text-white" />
+                  </div>
+                  <div className="ml-4 text-left">
+                    <p className="font-semibold text-nvm-dark-900">Reviews</p>
+                    <p className="text-sm text-gray-500">Reply and moderation</p>
                   </div>
                 </Link>
 

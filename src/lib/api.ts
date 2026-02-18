@@ -153,6 +153,7 @@ export const productsAPI = {
   submitForReview: (productId: string) => api.post(`/vendor/products/${productId}/submit`),
   vendorUnpublish: (productId: string) => api.patch(`/vendor/products/${productId}/unpublish`),
   vendorPublish: (productId: string) => api.patch(`/vendor/products/${productId}/publish`),
+  vendorRepublish: (productId: string) => api.patch(`/vendor/products/${productId}/republish`),
   adminApprove: (productId: string) => api.patch(`/admin/products/${productId}/approve`),
   adminReject: (productId: string, data: { reason: string }) => api.patch(`/admin/products/${productId}/reject`, data),
   adminUnpublish: (productId: string, data: { reason: string }) => api.patch(`/admin/products/${productId}/unpublish`, data),
@@ -194,6 +195,10 @@ export const vendorOrdersAPI = {
     productId: string,
     data: { carrier?: string; trackingNumber?: string; trackingUrl?: string }
   ) => api.patch(`/vendor/orders/${orderId}/items/${productId}/tracking`, data),
+  cancelItem: (orderId: string, productId: string, data: { reason: string }) =>
+    api.patch(`/vendor/orders/${orderId}/items/${productId}/cancel`, data),
+  getPackingSlipPdf: (orderId: string) => api.get(`/vendor/orders/${orderId}/packing-slip.pdf`, { responseType: 'blob' }),
+  getShippingLabelPdf: (orderId: string) => api.get(`/vendor/orders/${orderId}/shipping-label.pdf`, { responseType: 'blob' }),
 };
 
 export const adminOrdersAPI = {
@@ -399,8 +404,74 @@ export const subscriptionsAPI = {
 // Analytics
 export const analyticsAPI = {
   getVendorAnalytics: (params?: any) => api.get('/analytics/vendor', { params }),
+  getVendorSummary: (params?: any) => api.get('/vendor/analytics/summary', { params }),
+  getVendorTraffic: (params?: any) => api.get('/vendor/analytics/traffic', { params }),
   getPlatformAnalytics: () => api.get('/analytics/platform'),
   getSalesOverTime: (params?: any) => api.get('/analytics/sales-over-time', { params }),
+};
+
+export const vendorStoreAPI = {
+  get: () => api.get('/vendor/store'),
+  update: (data: any) => api.put('/vendor/store', data),
+  uploadLogo: (formData: FormData) =>
+    api.post('/vendor/store/upload-logo', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  uploadCover: (formData: FormData) =>
+    api.post('/vendor/store/upload-cover', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  getPublicBySlug: (storeSlug: string) => api.get(`/vendor/public/stores/${storeSlug}`),
+};
+
+export const vendorProductsAdvancedAPI = {
+  schedulePublish: (productId: string, scheduledPublishAt: string) =>
+    api.patch(`/vendor/products/${productId}/schedule`, { scheduledPublishAt }),
+  republish: (productId: string) => api.patch(`/vendor/products/${productId}/republish`),
+  bulkUpload: (formData: FormData) =>
+    api.post('/vendor/products/bulk-upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+  barcode: (productId: string, sku?: string) =>
+    api.get(`/vendor/products/${productId}/barcode`, { params: sku ? { sku } : undefined, responseType: 'blob' }),
+};
+
+export const vendorInventoryAPI = {
+  listAlerts: () => api.get('/vendor/inventory/alerts'),
+  upsertAlert: (data: { productId?: string; variantSku?: string; threshold?: number; active?: boolean }) =>
+    api.post('/vendor/inventory/alerts', data),
+  reserveStock: (data: { productId: string; sku?: string; qty: number; minutes?: number }) =>
+    api.post('/vendor/inventory/reservations', data),
+  consumeReservation: (reservationId: string) =>
+    api.patch(`/vendor/inventory/reservations/${reservationId}/consume`),
+};
+
+export const vendorMarketingAPI = {
+  getAll: () => api.get('/vendor/marketing'),
+  createCoupon: (data: any) => api.post('/vendor/marketing/coupons', data),
+  updateCoupon: (id: string, data: any) => api.put(`/vendor/marketing/coupons/${id}`, data),
+  createBundle: (data: any) => api.post('/vendor/marketing/bundles', data),
+  createFlashSale: (data: any) => api.post('/vendor/marketing/flash-sales', data),
+  createPromotedListing: (data: any) => api.post('/vendor/marketing/promoted-listings', data),
+  validateCoupon: (data: { code: string; items: Array<{ vendorId: string; price: number; quantity: number }> }) =>
+    api.post('/vendor/marketing/coupons/validate', data),
+};
+
+export const vendorWalletAPI = {
+  summary: () => api.get('/vendor/wallet/summary'),
+  transactions: (params?: any) => api.get('/vendor/wallet/transactions', { params }),
+  withdraw: (amount: number) => api.post('/vendor/wallet/withdraw', { amount }),
+  payoutRequests: () => api.get('/vendor/wallet/payout-requests'),
+  adminApprovePayout: (id: string, notes?: string) => api.patch(`/vendor/admin/payouts/${id}/approve`, { notes }),
+  adminMarkPaid: (id: string, notes?: string) => api.patch(`/vendor/admin/payouts/${id}/mark-paid`, { notes }),
+};
+
+export const vendorReviewsMgmtAPI = {
+  list: (params?: any) => api.get('/vendor/reviews', { params }),
+  summary: () => api.get('/vendor/reviews/summary'),
+  reply: (reviewId: string, message: string) => api.post(`/vendor/reviews/${reviewId}/reply`, { message }),
+  deleteReply: (reviewId: string) => api.delete(`/vendor/reviews/${reviewId}/reply`),
+  report: (reviewId: string, reason: string) => api.post(`/vendor/reviews/${reviewId}/report`, { reason }),
 };
 
 // Users (Admin)

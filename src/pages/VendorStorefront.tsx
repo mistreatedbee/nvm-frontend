@@ -5,7 +5,7 @@ import { MapPin, Star, Share2, Store, Mail, Phone, Globe, MessageSquare } from '
 import { Navbar } from '../components/Navbar';
 import { ProductCard } from '../components/ProductCard';
 import { VendorReviews } from '../components/VendorReviews';
-import { vendorsAPI, productsAPI } from '../lib/api';
+import { vendorsAPI, productsAPI, vendorStoreAPI } from '../lib/api';
 import { useAuthStore } from '../lib/store';
 import toast from 'react-hot-toast';
 
@@ -14,7 +14,8 @@ export function VendorStorefront() {
   const navigate = useNavigate();
   const { user, isAuthenticated } = useAuthStore();
   const [vendor, setVendor] = useState<any>(null);
-  const [products, setProducts] = useState([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [ratingSummary, setRatingSummary] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('newest');
   const [search, setSearch] = useState('');
@@ -28,9 +29,19 @@ export function VendorStorefront() {
   const fetchVendorAndProducts = async () => {
     try {
       let vendorData: any = null;
+      let productsFromStoreApiLoaded = false;
       if (slug) {
-        const profileRes = await vendorsAPI.getPublicProfileBySlug(slug);
-        vendorData = profileRes.data.data;
+        try {
+          const fullStoreRes = await vendorStoreAPI.getPublicBySlug(slug);
+          vendorData = fullStoreRes.data.data?.store;
+          const initialProducts = fullStoreRes.data.data?.products || [];
+          setProducts(initialProducts);
+          productsFromStoreApiLoaded = true;
+          setRatingSummary(fullStoreRes.data.data?.ratingSummary || null);
+        } catch (_error) {
+          const profileRes = await vendorsAPI.getPublicProfileBySlug(slug);
+          vendorData = profileRes.data.data;
+        }
       } else if (id) {
         const legacyRes = await vendorsAPI.getById(id);
         vendorData = legacyRes.data.data;
@@ -43,9 +54,11 @@ export function VendorStorefront() {
       }
 
       const vendorId = vendorData.vendorId || vendorData._id;
-      const productsRes = await productsAPI.getVendorProducts(vendorId, { limit: 24 });
       setVendor(vendorData);
-      setProducts(productsRes.data.data || []);
+      if (!productsFromStoreApiLoaded) {
+        const productsRes = await productsAPI.getVendorProducts(vendorId, { limit: 24 });
+        setProducts(productsRes.data.data || []);
+      }
     } catch (error: any) {
       toast.error('Vendor not found');
       navigate('/vendors');
@@ -207,6 +220,22 @@ export function VendorStorefront() {
         </motion.div>
 
         <VendorReviews vendorId={vendor.vendorId || vendor._id} />
+
+        {(vendor.storePolicies?.shippingPolicy || vendor.storePolicies?.returnsPolicy || vendor.storePolicies?.refundPolicy || vendor.storePolicies?.terms) && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <h3 className="text-xl font-bold text-nvm-dark-900 mb-4">Store Policies</h3>
+            {vendor.storePolicies?.shippingPolicy && <p className="text-sm text-gray-700 mb-2"><strong>Shipping:</strong> {vendor.storePolicies.shippingPolicy}</p>}
+            {vendor.storePolicies?.returnsPolicy && <p className="text-sm text-gray-700 mb-2"><strong>Returns:</strong> {vendor.storePolicies.returnsPolicy}</p>}
+            {vendor.storePolicies?.refundPolicy && <p className="text-sm text-gray-700 mb-2"><strong>Refunds:</strong> {vendor.storePolicies.refundPolicy}</p>}
+            {vendor.storePolicies?.terms && <p className="text-sm text-gray-700"><strong>Terms:</strong> {vendor.storePolicies.terms}</p>}
+          </div>
+        )}
+
+        {ratingSummary && (
+          <div className="bg-white rounded-xl shadow-sm p-4 mb-8 text-sm text-gray-700">
+            Rating Summary: {Number(ratingSummary.avgRating || 0).toFixed(1)} / 5 ({ratingSummary.count || 0} reviews)
+          </div>
+        )}
 
         {/* Products Section */}
         <div className="mb-8 flex items-center justify-between">

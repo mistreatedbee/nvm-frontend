@@ -25,25 +25,53 @@ export function VendorAnalytics() {
 
   const fetchAnalytics = async () => {
     try {
-      const endDate = new Date();
-      const startDate = new Date();
-      
-      if (dateRange === '7days') {
-        startDate.setDate(startDate.getDate() - 7);
-      } else if (dateRange === '30days') {
-        startDate.setDate(startDate.getDate() - 30);
-      } else if (dateRange === '90days') {
-        startDate.setDate(startDate.getDate() - 90);
-      } else if (dateRange === 'year') {
-        startDate.setFullYear(startDate.getFullYear() - 1);
+      const range = dateRange === '7days' ? '7d' : dateRange === '90days' ? '90d' : dateRange === 'year' ? 'custom' : '30d';
+      const params: any = { range };
+      if (dateRange === 'year') {
+        const to = new Date();
+        const from = new Date();
+        from.setFullYear(from.getFullYear() - 1);
+        params.from = from.toISOString();
+        params.to = to.toISOString();
       }
-      
-      const response = await analyticsAPI.getVendorAnalytics({
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString()
+      const [summaryRes, trafficRes] = await Promise.all([
+        analyticsAPI.getVendorSummary(params),
+        analyticsAPI.getVendorTraffic(params)
+      ]);
+      const summary = summaryRes.data?.data || {};
+      const traffic = trafficRes.data?.data || {};
+
+      setAnalytics({
+        overview: {
+          totalRevenue: summary.revenue || 0,
+          totalOrders: summary.totalOrders || 0,
+          totalItemsSold: summary.unitsSold || 0,
+          averageOrderValue: summary.avgOrderValue || 0
+        },
+        products: {
+          total: (summary.topProducts || []).length,
+          active: (summary.topProducts || []).length
+        },
+        reviews: {
+          averageRating: 0,
+          total: 0,
+          distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }
+        },
+        revenueByDay: summary.revenueByDay || [],
+        topProducts: (summary.topProducts || []).map((item: any) => ({
+          _id: item._id,
+          name: item.name || 'Product',
+          totalSales: item.unitsSold || 0,
+          price: item.revenue || 0,
+          images: []
+        })),
+        ordersByStatus: [
+          { _id: 'views', count: traffic.views || 0 },
+          { _id: 'clicks', count: traffic.clicks || 0 },
+          { _id: 'add_to_cart', count: traffic.addToCart || 0 },
+          { _id: 'purchases', count: traffic.purchases || 0 }
+        ]
       });
-      
-      setAnalytics(response.data.data);
     } catch (error) {
       console.error('Error fetching analytics:', error);
     } finally {

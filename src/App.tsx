@@ -67,6 +67,10 @@ import { SupportContact } from './pages/SupportContact';
 import { MySupportTickets } from './pages/MySupportTickets';
 import { AdminSupportInbox } from './pages/AdminSupportInbox';
 import { AdminHelpCenter } from './pages/AdminHelpCenter';
+import { VendorInventory } from './pages/VendorInventory';
+import { VendorMarketing } from './pages/VendorMarketing';
+import { VendorWallet } from './pages/VendorWallet';
+import { VendorReviewsManagement } from './pages/VendorReviewsManagement';
 
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
@@ -109,7 +113,11 @@ function App() {
         <Route path="/vendor/products/new" element={<VendorAddProduct />} />
         <Route path="/vendor/products/edit/:id" element={<VendorEditProduct />} />
         <Route path="/vendor/orders" element={<VendorOrders />} />
+        <Route path="/vendor/inventory" element={<VendorInventory />} />
         <Route path="/vendor/analytics" element={<VendorAnalytics />} />
+        <Route path="/vendor/marketing" element={<VendorMarketing />} />
+        <Route path="/vendor/wallet" element={<VendorWallet />} />
+        <Route path="/vendor/reviews" element={<VendorReviewsManagement />} />
         <Route path="/vendor/toolkit" element={<VendorToolkit />} />
         <Route path="/vendor/store-profile" element={<VendorStoreProfile />} />
         <Route path="/vendor/knowledge" element={<KnowledgeHubHome />} />

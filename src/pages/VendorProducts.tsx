@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { LoadingScreen } from '../components/LoadingScreen';
-import { productsAPI, vendorsAPI } from '../lib/api';
+import { bulkUploadAPI, productsAPI, vendorProductsAdvancedAPI, vendorsAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
 import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
 import toast from 'react-hot-toast';
@@ -14,7 +14,9 @@ import {
   Eye,
   Package,
   DollarSign,
-  TrendingUp
+  TrendingUp,
+  Upload,
+  Calendar
 } from 'lucide-react';
 
 const VENDOR_CAN_UNPUBLISH = String(import.meta.env.VITE_VENDOR_CAN_UNPUBLISH || 'false').toLowerCase() === 'true';
@@ -29,6 +31,11 @@ export function VendorProducts() {
   const [pages, setPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [processingId, setProcessingId] = useState<string>('');
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkResult, setBulkResult] = useState<any>(null);
+  const [scheduleDateByProduct, setScheduleDateByProduct] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchData();
@@ -87,7 +94,7 @@ export function VendorProducts() {
         await productsAPI.vendorUnpublish(product._id);
         toast.success('Product unpublished');
       } else {
-        await productsAPI.vendorPublish(product._id);
+        await productsAPI.vendorRepublish(product._id);
         toast.success('Product republished');
       }
       fetchData();
@@ -95,6 +102,61 @@ export function VendorProducts() {
       toast.error(error.response?.data?.message || 'Failed to update publish state');
     } finally {
       setProcessingId('');
+    }
+  };
+
+  const handleSchedule = async (productId: string) => {
+    const scheduledPublishAt = scheduleDateByProduct[productId];
+    if (!scheduledPublishAt) {
+      toast.error('Select date/time first');
+      return;
+    }
+    try {
+      setProcessingId(productId);
+      await vendorProductsAdvancedAPI.schedulePublish(productId, new Date(scheduledPublishAt).toISOString());
+      toast.success('Publish schedule updated');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to schedule product');
+    } finally {
+      setProcessingId('');
+    }
+  };
+
+  const handleDownloadTemplate = async () => {
+    try {
+      const response = await bulkUploadAPI.downloadTemplate();
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'vendor-products-template.csv';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (_error) {
+      toast.error('Failed to download template');
+    }
+  };
+
+  const handleBulkUpload = async () => {
+    if (!bulkFile) {
+      toast.error('Select a CSV file');
+      return;
+    }
+    const formData = new FormData();
+    formData.append('file', bulkFile);
+    setBulkLoading(true);
+    try {
+      const response = await vendorProductsAdvancedAPI.bulkUpload(formData);
+      setBulkResult(response.data?.data || null);
+      toast.success('Bulk upload processed');
+      fetchData();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Bulk upload failed');
+    } finally {
+      setBulkLoading(false);
     }
   };
 
@@ -151,6 +213,14 @@ export function VendorProducts() {
             </h1>
             <p className="text-gray-600">Manage your product inventory</p>
           </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowBulkModal(true)}
+              className="inline-flex items-center gap-2 px-4 py-3 rounded-xl font-semibold border border-gray-300 bg-white hover:bg-gray-50"
+            >
+              <Upload className="w-5 h-5" />
+              Bulk CSV
+            </button>
           {products.length >= 2 && (
             <div className="hidden sm:block text-sm text-gray-600">
               Product limit reached (2). Delete a product to add another.
@@ -167,6 +237,7 @@ export function VendorProducts() {
             <Plus className="w-5 h-5" />
             Add Product
           </Link>
+          </div>
         </div>
 
         {/* Quick Stats */}
@@ -356,6 +427,24 @@ export function VendorProducts() {
                             </button>
                           )}
                         </div>
+                        <div className="flex items-center justify-end gap-2 mt-2">
+                          <input
+                            type="datetime-local"
+                            value={scheduleDateByProduct[product._id] || ''}
+                            onChange={(e) =>
+                              setScheduleDateByProduct((prev) => ({ ...prev, [product._id]: e.target.value }))
+                            }
+                            className="text-xs border rounded px-2 py-1"
+                          />
+                          <button
+                            onClick={() => handleSchedule(product._id)}
+                            disabled={processingId === product._id}
+                            className="px-2 py-1 text-xs bg-blue-600 text-white rounded"
+                          >
+                            <Calendar className="w-3 h-3 inline mr-1" />
+                            Schedule
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -386,6 +475,93 @@ export function VendorProducts() {
           )}
         </div>
       </div>
+
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white w-full max-w-2xl rounded-xl shadow-lg p-6">
+            <h3 className="text-xl font-semibold mb-4">Bulk Product Upload</h3>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <button
+                onClick={handleDownloadTemplate}
+                className="px-3 py-2 border rounded bg-gray-50 hover:bg-gray-100 text-sm"
+              >
+                Download CSV Template
+              </button>
+              <input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => setBulkFile(e.target.files?.[0] || null)}
+                className="text-sm"
+              />
+              <button
+                onClick={handleBulkUpload}
+                disabled={bulkLoading}
+                className="px-3 py-2 rounded bg-nvm-green-primary text-white text-sm disabled:opacity-60"
+              >
+                {bulkLoading ? 'Processing...' : 'Upload CSV'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowBulkModal(false);
+                  setBulkFile(null);
+                  setBulkResult(null);
+                }}
+                className="px-3 py-2 rounded border text-sm"
+              >
+                Close
+              </button>
+            </div>
+
+            {bulkResult && (
+              <div className="space-y-3">
+                <div className="text-sm">Created: <strong>{bulkResult.createdCount || 0}</strong></div>
+                <div className="max-h-64 overflow-y-auto border rounded">
+                  {(bulkResult.failedRows || []).length === 0 ? (
+                    <div className="p-3 text-sm text-green-700">No failed rows</div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="text-left p-2">Row</th>
+                          <th className="text-left p-2">Title</th>
+                          <th className="text-left p-2">Reason</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bulkResult.failedRows.map((row: any, idx: number) => (
+                          <tr key={`${row.rowNumber}-${idx}`} className="border-t">
+                            <td className="p-2">{row.rowNumber}</td>
+                            <td className="p-2">{row.title}</td>
+                            <td className="p-2 text-red-700">{row.reason}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+                {bulkResult.errorReportCsv && (
+                  <button
+                    onClick={() => {
+                      const blob = new Blob([bulkResult.errorReportCsv], { type: 'text/csv;charset=utf-8;' });
+                      const url = window.URL.createObjectURL(blob);
+                      const link = document.createElement('a');
+                      link.href = url;
+                      link.download = 'bulk-upload-errors.csv';
+                      document.body.appendChild(link);
+                      link.click();
+                      link.remove();
+                      window.URL.revokeObjectURL(url);
+                    }}
+                    className="px-3 py-2 text-sm border rounded bg-gray-50 hover:bg-gray-100"
+                  >
+                    Download Error Report CSV
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

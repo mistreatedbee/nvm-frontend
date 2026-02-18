@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Navbar } from '../components/Navbar';
-import { vendorsAPI } from '../lib/api';
+import { vendorsAPI, vendorStoreAPI } from '../lib/api';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
@@ -87,8 +87,14 @@ export function VendorStoreProfile() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const me = await vendorsAPI.getMyProfile();
-        const vendor = me.data?.data;
+        let vendor: any;
+        try {
+          const storeRes = await vendorStoreAPI.get();
+          vendor = storeRes.data?.data;
+        } catch (_error) {
+          const me = await vendorsAPI.getMyProfile();
+          vendor = me.data?.data;
+        }
         if (!vendor?._id) {
           toast.error('No vendor profile found. Complete vendor registration first.');
           navigate('/vendor/setup');
@@ -196,13 +202,19 @@ export function VendorStoreProfile() {
         description: form.bio || form.about
       };
 
-      await vendorsAPI.upsertProfile(vendorId, payload);
+      await vendorStoreAPI.update(payload);
 
       if (profileImageFile || coverImageFile) {
         const imageForm = new FormData();
-        if (profileImageFile) imageForm.append('profileImage', profileImageFile);
-        if (coverImageFile) imageForm.append('coverImage', coverImageFile);
-        await vendorsAPI.uploadProfileImages(vendorId, imageForm);
+        if (profileImageFile) {
+          imageForm.append('logo', profileImageFile);
+          await vendorStoreAPI.uploadLogo(imageForm);
+        }
+        if (coverImageFile) {
+          const coverForm = new FormData();
+          coverForm.append('cover', coverImageFile);
+          await vendorStoreAPI.uploadCover(coverForm);
+        }
       }
 
       setForm((prev) => ({

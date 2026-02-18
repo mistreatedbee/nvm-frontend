@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
 import { VendorOrderTracking } from '../components/VendorOrderTracking';
-import { disputesAPI, orderManagementAPI, ordersAPI, invoicesAPI } from '../lib/api';
+import { disputesAPI, orderManagementAPI, ordersAPI, invoicesAPI, vendorOrdersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
 import {
@@ -117,6 +117,25 @@ export function VendorOrderManagement() {
       REJECTED: 'bg-red-100 text-red-800',
     };
     return colors[status] || 'bg-gray-100 text-gray-800';
+  };
+
+  const downloadVendorPdf = async (kind: 'packing' | 'label') => {
+    try {
+      const response = kind === 'packing'
+        ? await vendorOrdersAPI.getPackingSlipPdf(orderId!)
+        : await vendorOrdersAPI.getShippingLabelPdf(orderId!);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${kind}-${order.orderNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success(`${kind === 'packing' ? 'Packing slip' : 'Shipping label'} downloaded`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to download PDF');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -336,6 +355,20 @@ export function VendorOrderManagement() {
               >
                 <Download className="w-5 h-5" />
                 Download Invoice
+              </button>
+              <button
+                onClick={() => downloadVendorPdf('packing')}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                <Download className="w-5 h-5" />
+                Packing Slip
+              </button>
+              <button
+                onClick={() => downloadVendorPdf('label')}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              >
+                <Download className="w-5 h-5" />
+                Shipping Label
               </button>
               {order.customer?._id && (
                 <button

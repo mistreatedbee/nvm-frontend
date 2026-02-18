@@ -96,6 +96,51 @@ export function VendorOrders() {
     }
   };
 
+  const downloadBlob = (blobData: any, filename: string) => {
+    const url = window.URL.createObjectURL(new Blob([blobData]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const handleDownloadPackingSlip = async (orderId: string, orderNumber: string) => {
+    try {
+      const response = await vendorOrdersAPI.getPackingSlipPdf(orderId);
+      downloadBlob(response.data, `packing-slip-${orderNumber}.pdf`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to download packing slip');
+    }
+  };
+
+  const handleDownloadShippingLabel = async (orderId: string, orderNumber: string) => {
+    try {
+      const response = await vendorOrdersAPI.getShippingLabelPdf(orderId);
+      downloadBlob(response.data, `shipping-label-${orderNumber}.pdf`);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to download shipping label');
+    }
+  };
+
+  const cancelItem = async (orderId: string, productId: string) => {
+    const reason = prompt('Cancellation reason');
+    if (!reason?.trim()) return;
+    const key = `${orderId}:${productId}:cancel`;
+    setUpdatingKey(key);
+    try {
+      await vendorOrdersAPI.cancelItem(orderId, productId, { reason: reason.trim() });
+      toast.success('Item cancelled');
+      await loadOrders();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to cancel item');
+    } finally {
+      setUpdatingKey('');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -138,6 +183,18 @@ export function VendorOrders() {
                       <Link to={`/vendor/orders/${order._id}`} className="px-2.5 py-1.5 rounded border border-gray-300 text-xs hover:bg-gray-50">
                         Manage Order
                       </Link>
+                      <button
+                        onClick={() => handleDownloadPackingSlip(order._id, order.orderNumber)}
+                        className="px-2.5 py-1.5 rounded border border-gray-300 text-xs hover:bg-gray-50"
+                      >
+                        Packing Slip
+                      </button>
+                      <button
+                        onClick={() => handleDownloadShippingLabel(order._id, order.orderNumber)}
+                        className="px-2.5 py-1.5 rounded border border-gray-300 text-xs hover:bg-gray-50"
+                      >
+                        Shipping Label
+                      </button>
                       <Link to={`/disputes?orderId=${order._id}`} className="px-2.5 py-1.5 rounded border border-red-200 text-red-700 text-xs hover:bg-red-50">
                         Dispute Actions
                       </Link>
@@ -200,6 +257,15 @@ export function VendorOrders() {
                             <Package className="w-4 h-4 inline mr-1" />
                             Update Tracking
                           </button>
+                          {status !== 'CANCELLED' && status !== 'DELIVERED' && (
+                            <button
+                              disabled={!!updatingKey}
+                              onClick={() => cancelItem(order._id, productId)}
+                              className="px-3 py-1.5 bg-red-600 text-white rounded-lg text-sm disabled:opacity-50"
+                            >
+                              Cancel Item
+                            </button>
+                          )}
                         </div>
 
                         {updatingKey && updatingKey.startsWith(`${order._id}:${productId}`) && (
