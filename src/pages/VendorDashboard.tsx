@@ -59,13 +59,23 @@ export function VendorDashboard() {
         return;
       }
 
-      // Then fetch products and orders (these require an active vendor profile)
-      const [productsRes, ordersRes] = await Promise.all([
-        productsAPI.getMyProducts({ limit: 5 }),
-        ordersAPI.getVendorOrders({ limit: 5 })
-      ]);
-      setProducts(productsRes.data.data || []);
-      setOrders(ordersRes.data.data || []);
+      const isActiveVendor =
+        String(vendorData?.vendorStatus || '').toUpperCase() === 'ACTIVE' ||
+        (String(vendorData?.status || '').toLowerCase() === 'approved' &&
+          String(vendorData?.accountStatus || '').toLowerCase() === 'active');
+
+      // Products/orders endpoints require an active vendor account.
+      if (isActiveVendor) {
+        const [productsRes, ordersRes] = await Promise.all([
+          productsAPI.getMyProducts({ limit: 5 }),
+          ordersAPI.getVendorOrders({ limit: 5 })
+        ]);
+        setProducts(productsRes.data.data || []);
+        setOrders(ordersRes.data.data || []);
+      } else {
+        setProducts([]);
+        setOrders([]);
+      }
 
       const analyticsRes = await vendorsAPI.getAnalytics(vendorData._id);
       const raw = analyticsRes.data.data;
