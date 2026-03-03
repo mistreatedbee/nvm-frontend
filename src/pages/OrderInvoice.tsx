@@ -53,6 +53,7 @@ export function OrderInvoice() {
               storeName: inv.vendorDetails?.storeName || 'Vendor',
               email: inv.vendorDetails?.contact?.email || '-',
               phone: inv.vendorDetails?.contact?.phone || '-',
+              address: inv.vendorDetails?.location || {},
               bankDetails: inv.vendorDetails?.banking || null
             },
             items: (inv.lineItems || []).map((line: any, idx: number) => ({
@@ -247,6 +248,18 @@ export function OrderInvoice() {
                     <Phone className="w-4 h-4" />
                     {vendorGroup.vendor.phone}
                   </p>
+                  <p className="flex items-start gap-2 md:col-span-2">
+                    <MapPin className="w-4 h-4 mt-0.5" />
+                    <span>
+                      {[
+                        vendorGroup.vendor.address?.addressLine,
+                        vendorGroup.vendor.address?.suburb,
+                        vendorGroup.vendor.address?.city,
+                        vendorGroup.vendor.address?.state,
+                        vendorGroup.vendor.address?.country
+                      ].filter(Boolean).join(', ') || '-'}
+                    </span>
+                  </p>
                 </div>
               </div>
 
@@ -275,7 +288,7 @@ export function OrderInvoice() {
               </div>
 
               {/* Banking Details for EFT/Bank Transfer */}
-              {vendorGroup.vendor.bankDetails && (invoice.paymentMethod === 'eft' || invoice.paymentMethod === 'bank-transfer') && (
+              {vendorGroup.vendor.bankDetails && ['eft', 'bank-transfer', 'invoice'].includes(String(invoice.paymentMethod || '').toLowerCase()) && (
                 <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
                   <h4 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
                     <CreditCard className="w-5 h-5" />
@@ -288,7 +301,7 @@ export function OrderInvoice() {
                     </div>
                     <div>
                       <span className="text-gray-600">Account Holder:</span>
-                      <p className="font-semibold">{vendorGroup.vendor.bankDetails.accountHolderName}</p>
+                      <p className="font-semibold">{vendorGroup.vendor.bankDetails.accountHolder || vendorGroup.vendor.bankDetails.accountHolderName || '-'}</p>
                     </div>
                     <div>
                       <span className="text-gray-600">Account Number:</span>
@@ -315,12 +328,10 @@ export function OrderInvoice() {
                   <span>Subtotal:</span>
                   <span className="font-semibold">{formatRands(invoice.subtotal)}</span>
                 </div>
-                {invoice.shippingCost > 0 && (
-                  <div className="flex justify-between text-gray-600">
-                    <span>Shipping:</span>
-                    <span className="font-semibold">{formatRands(invoice.shippingCost)}</span>
-                  </div>
-                )}
+                <div className="flex justify-between text-gray-600">
+                  <span>Delivery Fee:</span>
+                  <span className="font-semibold">{formatRands(invoice.shippingCost || 0)}</span>
+                </div>
                 {invoice.tax > 0 && (
                   <div className="flex justify-between text-gray-600">
                     <span>Tax (VAT):</span>
