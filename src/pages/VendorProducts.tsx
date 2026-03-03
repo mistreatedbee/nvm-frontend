@@ -221,15 +221,15 @@ export function VendorProducts() {
               <Upload className="w-5 h-5" />
               Bulk CSV
             </button>
-          {products.length >= 2 && (
+          {products.length >= 5 && (
             <div className="hidden sm:block text-sm text-gray-600">
-              Product limit reached (2). Delete a product to add another.
+              You&apos;ve reached the 5-product limit. You can still update stock on existing products.
             </div>
           )}
           <Link
             to="/vendor/products/new"
             className={`inline-flex items-center gap-2 px-6 py-3 rounded-xl font-semibold shadow-lg transition-all ${
-              products.length >= 2
+              products.length >= 5
                 ? 'bg-gray-300 text-gray-600 cursor-not-allowed pointer-events-none'
                 : 'bg-nvm-green-primary text-white hover:bg-nvm-green-dark'
             }`}

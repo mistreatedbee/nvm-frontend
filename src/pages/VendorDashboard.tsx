@@ -251,7 +251,7 @@ export function VendorDashboard() {
                 <Link
                   to="/vendor/products/new"
                 className={`w-full flex items-center p-4 rounded-lg border-2 transition-all group ${
-                  analytics.totalProducts >= 2
+                  analytics.totalProducts >= 5
                     ? 'border-gray-200 bg-gray-50 opacity-60 cursor-not-allowed pointer-events-none'
                     : 'border-nvm-green-200 bg-nvm-green-50 hover:bg-nvm-green-100'
                 }`}
@@ -262,7 +262,7 @@ export function VendorDashboard() {
                   <div className="ml-4 text-left">
                     <p className="font-semibold text-nvm-dark-900">Add Product</p>
                   <p className="text-sm text-gray-500">
-                    {analytics.totalProducts >= 2 ? 'Limit reached (2 products)' : 'List new item'}
+                    {analytics.totalProducts >= 5 ? 'You\'ve reached the 5-product limit. You can still update stock on existing products.' : 'List new item'}
                   </p>
                   </div>
                 </Link>

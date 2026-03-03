@@ -56,7 +56,7 @@ export function VendorStorefront() {
       const vendorId = vendorData.vendorId || vendorData._id;
       setVendor(vendorData);
       if (!productsFromStoreApiLoaded) {
-        const productsRes = await productsAPI.getVendorProducts(vendorId, { limit: 24 });
+        const productsRes = await productsAPI.getPublicVendorProducts(vendorId, { limit: 24, sort: 'newest' });
         setProducts(productsRes.data.data || []);
       }
     } catch (error: any) {

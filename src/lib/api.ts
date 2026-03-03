@@ -148,6 +148,8 @@ export const productsAPI = {
   getBySlug: (slug: string) => api.get(`/products/slug/${slug}`),
   getVendorProducts: (vendorId: string, params?: any) =>
     api.get(`/products/vendor/${vendorId}`, { params }),
+  getPublicVendorProducts: (vendorId: string, params?: any) =>
+    api.get(`/public/vendors/${vendorId}/products`, { params }),
   getFeatured: () => api.get('/products/featured'),
   getHistory: (productId: string, params?: any) => api.get(`/products/${productId}/history`, { params }),
   update: (productId: string, data: any) => api.put(`/vendor/products/${productId}`, data),

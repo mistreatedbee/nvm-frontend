@@ -78,7 +78,7 @@ export function VendorAddProduct() {
     const [vendorResult, categoriesResult, myProductsResult] = await Promise.allSettled([
       vendorsAPI.getMyProfile(),
       categoriesAPI.getAll(),
-      productsAPI.getMyProducts({ limit: 2 })
+      productsAPI.getMyProducts({ limit: 1 })
     ]);
 
     if (vendorResult.status === 'fulfilled') {
@@ -102,8 +102,13 @@ export function VendorAddProduct() {
     }
 
     if (myProductsResult.status === 'fulfilled') {
-      const data = (myProductsResult.value as any).data?.data || [];
-      setMyProductCount(Array.isArray(data) ? data.length : 0);
+      const total = (myProductsResult.value as any).data?.total;
+      if (typeof total === 'number') {
+        setMyProductCount(total);
+      } else {
+        const data = (myProductsResult.value as any).data?.data || [];
+        setMyProductCount(Array.isArray(data) ? data.length : 0);
+      }
     }
 
     setLoading(false);
@@ -311,7 +316,7 @@ export function VendorAddProduct() {
     );
   }
 
-  if (myProductCount >= 2) {
+  if (myProductCount >= 5) {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar />
@@ -319,7 +324,7 @@ export function VendorAddProduct() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
             <h2 className="text-2xl font-bold text-nvm-dark-900 mb-2">Product limit reached</h2>
             <p className="text-gray-600 mb-6">
-              You can only add <span className="font-semibold">2 products</span> at the moment. Delete a product to add another.
+              You&apos;ve reached the <span className="font-semibold">5-product limit</span>. You can still update stock on existing products.
             </p>
             <Link
               to="/vendor/products"

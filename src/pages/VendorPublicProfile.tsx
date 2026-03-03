@@ -36,7 +36,7 @@ export function VendorPublicProfile() {
     try {
       const [vendorRes, productsRes] = await Promise.all([
         vendorsAPI.getById(vendorId!),
-        productsAPI.getVendorProducts(vendorId!, { limit: 12 })
+        productsAPI.getPublicVendorProducts(vendorId!, { limit: 12, sort: 'newest' })
       ]);
 
       setVendor(vendorRes.data.data);
