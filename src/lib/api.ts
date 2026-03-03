@@ -170,7 +170,10 @@ export const productsAPI = {
 
 // Orders
 export const ordersAPI = {
-  create: (data: any) => api.post('/orders', data),
+  create: (data: any, options?: { idempotencyKey?: string }) =>
+    api.post('/orders', data, {
+      headers: options?.idempotencyKey ? { 'Idempotency-Key': options.idempotencyKey } : undefined
+    }),
   getAll: (params?: any) => api.get('/orders', { params }),
   getById: (id: string) => api.get(`/orders/${id}`),
   getMyOrders: (params?: any) => api.get('/orders/my', { params }),
@@ -235,7 +238,17 @@ export const wishlistAPI = {
 
 export const cartAPI = {
   get: () => api.get('/cart', { headers: { 'x-session-id': getGuestCartSessionId() } }),
-  add: (productId: string, qty = 1) => api.post('/cart/add', { productId, qty }, { headers: { 'x-session-id': getGuestCartSessionId() } }),
+  add: (productId: string, qty = 1, idempotencyKey?: string) =>
+    api.post(
+      '/cart/add',
+      { productId, qty },
+      {
+        headers: {
+          'x-session-id': getGuestCartSessionId(),
+          ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {})
+        }
+      }
+    ),
   update: (productId: string, qty: number) => api.post('/cart/update', { productId, qty }, { headers: { 'x-session-id': getGuestCartSessionId() } }),
   remove: (productId: string) => api.post('/cart/remove', { productId }, { headers: { 'x-session-id': getGuestCartSessionId() } }),
   clear: () => api.post('/cart/clear', {}, { headers: { 'x-session-id': getGuestCartSessionId() } }),

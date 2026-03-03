@@ -28,6 +28,7 @@ export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: Pr
   const { addItem } = useCartStore();
   const { toggleItem, isInWishlist } = useWishlistStore();
   const { isAuthenticated } = useAuthStore();
+  const [isAdding, setIsAdding] = React.useState(false);
   
   const productId = product._id || product.id || '';
   const productImage = product.image || product.images?.[0]?.url || DEFAULT_IMAGE_DATA_URI;
@@ -37,8 +38,10 @@ export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: Pr
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    if (isAdding) return;
     
     try {
+      setIsAdding(true);
       await addItem({
         productId,
         name: product.name,
@@ -54,6 +57,8 @@ export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: Pr
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to add to cart');
       return;
+    } finally {
+      setIsAdding(false);
     }
     if (productId) {
       trackingAPI.trackAddToCart({
@@ -112,6 +117,7 @@ export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: Pr
             whileHover={{ scale: 1.1 }}
             whileTap={{ scale: 0.9 }}
             onClick={handleAddToCart}
+            disabled={isAdding}
             className="p-3 bg-white rounded-full text-nvm-green-primary shadow-lg hover:bg-nvm-green-primary hover:text-white transition-colors"
             aria-label="Add to cart"
           >

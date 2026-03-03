@@ -21,6 +21,7 @@ export function ProductDetail() {
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
   const [newQuestion, setNewQuestion] = useState('');
+  const [isAddingToCart, setIsAddingToCart] = useState(false);
   
   const { addItem } = useCartStore();
   const { toggleItem, isInWishlist } = useWishlistStore();
@@ -57,8 +58,10 @@ export function ProductDetail() {
 
   const handleAddToCart = async () => {
     if (!product) return;
+    if (isAddingToCart) return;
 
     try {
+      setIsAddingToCart(true);
       await addItem({
         productId: product._id,
         name: product.name,
@@ -74,6 +77,8 @@ export function ProductDetail() {
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to add item to cart');
       return;
+    } finally {
+      setIsAddingToCart(false);
     }
 
     trackingAPI.trackAddToCart({
@@ -278,7 +283,7 @@ export function ProductDetail() {
               <div className="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
                 <button
                   onClick={handleAddToCart}
-                  disabled={product.status !== 'PUBLISHED' || (product.trackInventory && product.stock === 0)}
+                  disabled={isAddingToCart || product.status !== 'PUBLISHED' || (product.trackInventory && product.stock === 0)}
                   className="flex-1 flex items-center justify-center gap-2 px-6 py-4 bg-nvm-green-primary text-white rounded-lg font-semibold hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ShoppingBag className="w-5 h-5" />
@@ -373,7 +378,7 @@ export function ProductDetail() {
             </div>
             <button
               onClick={handleAddToCart}
-              disabled={product.status !== 'PUBLISHED' || (product.trackInventory && product.stock === 0)}
+              disabled={isAddingToCart || product.status !== 'PUBLISHED' || (product.trackInventory && product.stock === 0)}
               className="px-4 py-3 min-h-[44px] bg-nvm-green-primary text-white rounded-lg font-semibold disabled:opacity-50"
             >
               Add to Cart

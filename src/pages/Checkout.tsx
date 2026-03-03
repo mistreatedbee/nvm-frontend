@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -44,6 +44,8 @@ export function Checkout() {
   const [helpSuggestions, setHelpSuggestions] = useState<any[]>([]);
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY');
   const [quotedShipping, setQuotedShipping] = useState<number | null>(null);
+  const checkoutIdempotencyKeyRef = useRef('');
+  const debugCheckout = import.meta.env.DEV || localStorage.getItem('DEBUG_CHECKOUT') === 'true';
 
   const {
     register,
@@ -99,6 +101,12 @@ export function Checkout() {
     setCheckoutError('');
     setHelpSuggestions([]);
     try {
+      if (!checkoutIdempotencyKeyRef.current) {
+        checkoutIdempotencyKeyRef.current = `checkout-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      }
+      if (debugCheckout) {
+        console.info('[checkout] submit start', { idempotencyKey: checkoutIdempotencyKeyRef.current });
+      }
       if (!isAuthenticated) {
         toast.error('Please log in to place your order');
         navigate('/login');
@@ -170,7 +178,15 @@ export function Checkout() {
         giftCardCode: appliedGiftCardCode || undefined
       };
 
-      const orderRes = await ordersAPI.create(orderData);
+      const orderRes = await ordersAPI.create(orderData, {
+        idempotencyKey: checkoutIdempotencyKeyRef.current
+      });
+      if (debugCheckout) {
+        console.info('[checkout] order response', {
+          idempotencyKey: checkoutIdempotencyKeyRef.current,
+          orderId: orderRes.data?.data?._id
+        });
+      }
       setCreatedOrderId(orderRes.data?.data?._id || '');
       setCreatedInvoices(orderRes.data?.invoices || []);
 
@@ -190,6 +206,7 @@ export function Checkout() {
       await cartAPI.clear();
       await clearLocalCart();
       setStep('success');
+      checkoutIdempotencyKeyRef.current = '';
       toast.success('Order placed. Invoice generated.');
     } catch (error: any) {
       const message = error.response?.data?.message || 'Failed to place order';

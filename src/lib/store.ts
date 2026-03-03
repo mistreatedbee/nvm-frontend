@@ -53,6 +53,7 @@ interface CartItem {
 interface CartState {
   items: CartItem[];
   syncing: boolean;
+  addingByProductId: Record<string, boolean>;
   addItem: (item: CartItem) => Promise<void>;
   removeItem: (productId: string) => Promise<void>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
@@ -65,6 +66,12 @@ interface CartState {
 
 function hasToken() {
   return Boolean(localStorage.getItem('token'));
+}
+
+function debugCartLog(...args: any[]) {
+  const enabled = import.meta.env.DEV || localStorage.getItem('DEBUG_CART') === 'true';
+  if (!enabled) return;
+  console.info('[cart]', ...args);
 }
 
 function mapServerCartItems(serverItems: any[]): CartItem[] {
@@ -86,7 +93,19 @@ export const useCartStore = create<CartState>()(
     (set, get) => ({
       items: [],
       syncing: false,
+      addingByProductId: {},
       addItem: async (item) => {
+        if (!item?.productId) return;
+        if (get().addingByProductId[item.productId]) return;
+        debugCartLog('addItem called', { productId: item.productId, quantity: item.quantity });
+
+        set({
+          addingByProductId: {
+            ...get().addingByProductId,
+            [item.productId]: true
+          }
+        });
+
         const previous = get().items;
         const existingItem = previous.find((i) => i.productId === item.productId);
 
@@ -101,11 +120,17 @@ export const useCartStore = create<CartState>()(
         set({ items: optimistic });
 
         try {
-          const res = await cartAPI.add(item.productId, item.quantity);
+          const idempotencyKey = `cart-add-${item.productId}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+          const res = await cartAPI.add(item.productId, item.quantity, idempotencyKey);
+          debugCartLog('addItem response', { productId: item.productId, idempotencyKey, itemCount: res.data?.data?.itemCount });
           set({ items: mapServerCartItems(res.data?.data?.items || []) });
         } catch (error) {
           set({ items: previous });
           throw error;
+        } finally {
+          const next = { ...get().addingByProductId };
+          delete next[item.productId];
+          set({ addingByProductId: next });
         }
       },
       removeItem: async (productId) => {

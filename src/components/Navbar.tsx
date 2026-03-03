@@ -8,7 +8,7 @@ import { NotificationBell } from './NotificationBell';
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { getItemsCount, syncFromServer, mergeGuestCartToServer } = useCartStore();
+  const { getItemsCount, syncFromServer } = useCartStore();
   const { syncFromServer: syncWishlistFromServer } = useWishlistStore();
   const navigate = useNavigate();
   const cartItemsCount = getItemsCount();
@@ -21,11 +21,9 @@ export function Navbar() {
 
   useEffect(() => {
     if (!isAuthenticated) return;
-    mergeGuestCartToServer().catch(() => {
-      syncFromServer().catch(() => {});
-    });
+    syncFromServer().catch(() => {});
     syncWishlistFromServer().catch(() => {});
-  }, [isAuthenticated, mergeGuestCartToServer, syncFromServer, syncWishlistFromServer]);
+  }, [isAuthenticated, syncFromServer, syncWishlistFromServer]);
 
   return (
     <nav className="bg-white shadow-sm sticky top-0 z-50">
