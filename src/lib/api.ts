@@ -66,7 +66,9 @@ export const authAPI = {
   verifyEmailWithCode: (data: any) => api.post('/auth/verify-email-code', data),
   resendVerification: (email: string) => api.post('/auth/resend-verification', { email }),
   forgotPassword: (data: any) => api.post('/auth/forgot-password', data),
-  resetPassword: (token: string, data: any) => api.put(`/auth/reset-password/${token}`, data),
+  validateResetToken: (data: { email: string; token: string }) => api.post('/auth/validate-reset-token', data),
+  resetPassword: (data: { email: string; token: string; newPassword: string; confirmPassword?: string }) =>
+    api.post('/auth/reset-password', data),
 };
 
 // Vendors

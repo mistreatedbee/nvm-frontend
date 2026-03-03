@@ -25,9 +25,9 @@ export function ForgotPassword() {
     try {
       await authAPI.forgotPassword(data);
       setEmailSent(true);
-      toast.success('Password reset email sent!');
+      toast.success('If the email exists, we sent a reset link.');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to send email');
+      toast.error(error.response?.data?.message || 'If the email exists, we sent a reset link.');
     } finally {
       setIsLoading(false);
     }
@@ -46,7 +46,7 @@ export function ForgotPassword() {
             Check Your Email
           </h2>
           <p className="text-gray-600 mb-6">
-            We've sent a password reset link to your email address. Please check your inbox and follow the instructions.
+            If an account exists for that email, a password reset link has been sent. Please check your inbox and follow the instructions.
           </p>
           <Link
             to="/login"

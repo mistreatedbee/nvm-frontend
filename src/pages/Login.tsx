@@ -130,6 +130,11 @@ export function Login() {
               {errors.password && (
                 <p className="mt-1 text-sm text-red-600">{errors.password.message}</p>
               )}
+              <div className="mt-2 text-right">
+                <Link to="/forgot-password" className="text-sm text-nvm-green-primary hover:underline">
+                  Forgot password?
+                </Link>
+              </div>
             </div>
 
             <button

@@ -1,9 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { motion } from 'framer-motion';
 import { authAPI } from '../lib/api';
-import { useAuthStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import { Lock } from 'lucide-react';
 
@@ -13,10 +12,14 @@ interface ResetPasswordForm {
 }
 
 export function ResetPassword() {
-  const { token } = useParams();
+  const { token: legacyParamToken } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [hasSubmitError, setHasSubmitError] = useState(false);
+
+  const token = String(searchParams.get('token') || legacyParamToken || '').trim();
+  const email = String(searchParams.get('email') || '').trim().toLowerCase();
 
   const {
     register,
@@ -28,20 +31,26 @@ export function ResetPassword() {
   const password = watch('password');
 
   const onSubmit = async (data: ResetPasswordForm) => {
-    if (!token) {
-      toast.error('Invalid reset token');
+    if (!token || !email) {
+      setHasSubmitError(true);
+      toast.error('Link invalid or expired. Request a new reset link.');
       return;
     }
 
     setIsLoading(true);
+    setHasSubmitError(false);
     try {
-      const response = await authAPI.resetPassword(token, { password: data.password });
-      const { user, token: authToken } = response.data;
-      setAuth(user, authToken);
-      toast.success('Password reset successfully!');
-      navigate('/');
+      await authAPI.resetPassword({
+        email,
+        token,
+        newPassword: data.password,
+        confirmPassword: data.confirmPassword
+      });
+      toast.success('Password updated successfully. Please sign in.');
+      navigate('/login');
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to reset password');
+      setHasSubmitError(true);
+      toast.error(error.response?.data?.message || 'Link invalid or expired. Request a new reset link.');
     } finally {
       setIsLoading(false);
     }
@@ -68,6 +77,14 @@ export function ResetPassword() {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-8">
+          {hasSubmitError && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              Link invalid or expired.{' '}
+              <Link to="/forgot-password" className="font-medium underline">
+                Request a new reset link
+              </Link>
+            </div>
+          )}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
@@ -122,6 +139,11 @@ export function ResetPassword() {
               {isLoading ? 'Resetting...' : 'Reset Password'}
             </button>
           </form>
+          <div className="mt-4 text-center">
+            <Link to="/forgot-password" className="text-sm text-nvm-green-primary hover:underline">
+              Request new reset link
+            </Link>
+          </div>
         </div>
       </motion.div>
     </div>
