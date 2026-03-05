@@ -6,7 +6,7 @@ import { Navbar } from '../components/Navbar';
 import { useCartStore, useAuthStore } from '../lib/store';
 import { addressesAPI, cartAPI, checkoutAPI, helpAPI, logisticsAPI, ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
-import { FileText, MapPin, CheckCircle } from 'lucide-react';
+import { FileText, MapPin, CheckCircle, Minus, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface CheckoutForm {
@@ -23,7 +23,7 @@ interface CheckoutForm {
 
 export function Checkout() {
   const navigate = useNavigate();
-  const { clearCart: clearLocalCart } = useCartStore();
+  const { clearCart: clearLocalCart, syncFromServer: syncCartStore } = useCartStore();
   const { isAuthenticated } = useAuthStore();
   const [loading, setLoading] = useState(false);
   const [loadingCart, setLoadingCart] = useState(true);
@@ -44,6 +44,7 @@ export function Checkout() {
   const [helpSuggestions, setHelpSuggestions] = useState<any[]>([]);
   const [deliveryMethod, setDeliveryMethod] = useState<'DELIVERY' | 'PICKUP'>('DELIVERY');
   const [quotedShipping, setQuotedShipping] = useState<number | null>(null);
+  const [qtyUpdatingByProductId, setQtyUpdatingByProductId] = useState<Record<string, boolean>>({});
   const checkoutIdempotencyKeyRef = useRef('');
   const debugCheckout = import.meta.env.DEV || localStorage.getItem('DEBUG_CHECKOUT') === 'true';
 
@@ -95,6 +96,35 @@ export function Checkout() {
   const totalBeforeDiscount = subtotal + shipping + tax;
   const totalDiscount = Math.min(totalBeforeDiscount, promoDiscount + giftCardApplied);
   const total = Math.max(0, totalBeforeDiscount - totalDiscount);
+
+  const handleCheckoutQuantityChange = async (productId: string, delta: number) => {
+    if (qtyUpdatingByProductId[productId]) return;
+    const current = cartItems.find((entry: any) => String(entry.productId) === String(productId));
+    if (!current) return;
+
+    const nextQty = Number(current.qty || 0) + delta;
+    setQtyUpdatingByProductId((prev) => ({ ...prev, [productId]: true }));
+    try {
+      const response = nextQty <= 0
+        ? await cartAPI.remove(productId)
+        : await cartAPI.update(productId, nextQty);
+      const items = response.data?.data?.items || [];
+      setCartItems(items);
+      if (!items.length) {
+        toast('Your cart is empty');
+        navigate('/cart');
+      }
+      syncCartStore().catch(() => {});
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to update quantity');
+    } finally {
+      setQtyUpdatingByProductId((prev) => {
+        const next = { ...prev };
+        delete next[productId];
+        return next;
+      });
+    }
+  };
 
   const onSubmit = async (data: CheckoutForm) => {
     setLoading(true);
@@ -579,7 +609,25 @@ export function Checkout() {
                     />
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-sm line-clamp-1">{item.titleSnapshot}</p>
-                      <p className="text-xs text-gray-500">Qty: {item.qty}</p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleCheckoutQuantityChange(String(item.productId), -1)}
+                          disabled={Boolean(qtyUpdatingByProductId[String(item.productId)])}
+                          className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="text-xs text-gray-700 min-w-[20px] text-center">{item.qty}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCheckoutQuantityChange(String(item.productId), 1)}
+                          disabled={Boolean(qtyUpdatingByProductId[String(item.productId)])}
+                          className="w-7 h-7 flex items-center justify-center rounded border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                       <p className="text-sm font-bold text-nvm-gold-primary">{formatRands(item.priceSnapshot * item.qty)}</p>
                     </div>
                   </div>
