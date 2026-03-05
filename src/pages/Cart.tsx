@@ -1,4 +1,4 @@
-﻿import React, { useEffect } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -10,6 +10,7 @@ import toast from 'react-hot-toast';
 export function Cart() {
   const navigate = useNavigate();
   const { items, removeItem, updateQuantity, getTotal, clearCart, syncFromServer, syncing } = useCartStore();
+  const [qtyUpdatingByProductId, setQtyUpdatingByProductId] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     syncFromServer().catch(() => {});
@@ -26,6 +27,31 @@ export function Cart() {
       return;
     }
     navigate('/checkout');
+  };
+
+  const handleQuantityChange = async (productId: string, delta: number) => {
+    if (qtyUpdatingByProductId[productId]) return;
+
+    const latestItem = useCartStore.getState().items.find((entry) => entry.productId === productId);
+    const currentQty = Number(latestItem?.quantity || 0);
+    const nextQty = currentQty + delta;
+
+    setQtyUpdatingByProductId((prev) => ({ ...prev, [productId]: true }));
+    try {
+      if (nextQty <= 0) {
+        await removeItem(productId);
+      } else {
+        await updateQuantity(productId, nextQty);
+      }
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to update quantity');
+    } finally {
+      setQtyUpdatingByProductId((prev) => {
+        const copy = { ...prev };
+        delete copy[productId];
+        return copy;
+      });
+    }
   };
 
   return (
@@ -109,26 +135,16 @@ export function Cart() {
                         <div className="flex items-center justify-between mt-4">
                           <div className="flex items-center gap-2">
                             <button
-                              onClick={async () => {
-                                try {
-                                  await updateQuantity(item.productId, item.quantity - 1);
-                                } catch (error: any) {
-                                  toast.error(error?.response?.data?.message || 'Failed to update quantity');
-                                }
-                              }}
+                              onClick={() => handleQuantityChange(item.productId, -1)}
+                              disabled={Boolean(qtyUpdatingByProductId[item.productId])}
                               className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
                             <span className="w-10 text-center font-semibold">{item.quantity}</span>
                             <button
-                              onClick={async () => {
-                                try {
-                                  await updateQuantity(item.productId, item.quantity + 1);
-                                } catch (error: any) {
-                                  toast.error(error?.response?.data?.message || 'Failed to update quantity');
-                                }
-                              }}
+                              onClick={() => handleQuantityChange(item.productId, 1)}
+                              disabled={Boolean(qtyUpdatingByProductId[item.productId])}
                               className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors"
                             >
                               <Plus className="w-4 h-4" />
@@ -225,3 +241,4 @@ export function Cart() {
     </div>
   );
 }
+
