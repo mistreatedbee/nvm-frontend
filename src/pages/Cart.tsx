@@ -35,14 +35,11 @@ export function Cart() {
     const latestItem = useCartStore.getState().items.find((entry) => entry.productId === productId);
     const currentQty = Number(latestItem?.quantity || 0);
     const nextQty = currentQty + delta;
+    if (nextQty < 1) return;
 
     setQtyUpdatingByProductId((prev) => ({ ...prev, [productId]: true }));
     try {
-      if (nextQty <= 0) {
-        await removeItem(productId);
-      } else {
-        await updateQuantity(productId, nextQty);
-      }
+      await updateQuantity(productId, nextQty);
     } catch (error: any) {
       toast.error(error?.response?.data?.message || 'Failed to update quantity');
     } finally {
@@ -136,7 +133,7 @@ export function Cart() {
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => handleQuantityChange(item.productId, -1)}
-                              disabled={Boolean(qtyUpdatingByProductId[item.productId])}
+                              disabled={Boolean(qtyUpdatingByProductId[item.productId]) || item.quantity <= 1}
                               className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors"
                             >
                               <Minus className="w-4 h-4" />
