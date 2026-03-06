@@ -252,7 +252,7 @@ The platform features a vibrant African-inspired design:
 5. Manage orders from vendor dashboard
 
 ### For Admins
-1. Use the admin credentials from backend/.env
+1. Set `ADMIN_EMAIL` and a strong `ADMIN_PASSWORD`, then run `npm run create-admin` in `nvm-marketplace-backend`
 2. Access admin panel at /admin
 3. Approve pending vendors
 4. Moderate content

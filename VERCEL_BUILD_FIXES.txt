@@ -39,8 +39,8 @@ Your project should now build successfully on Vercel!
   🔐 ADMIN USER CREDENTIALS
 ════════════════════════════════════════════════════════════════
 
-📧 Email:    admin@nvm.com
-🔑 Password: admin123
+📧 Email:    from ADMIN_EMAIL
+🔑 Password: from ADMIN_PASSWORD (set a strong high-entropy value)
 
 TO CREATE ADMIN USER:
 cd nvm-marketplace-backend

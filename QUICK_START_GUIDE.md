@@ -27,6 +27,8 @@ cp ENV_TEMPLATE.txt .env
 # Required environment variables:
 # MONGO_URI=your_mongodb_connection_string
 # JWT_SECRET=your_jwt_secret
+# ADMIN_EMAIL=admin@nvm.com
+# ADMIN_PASSWORD=your_strong_admin_password
 # JWT_EXPIRE=30d
 # EMAIL_HOST=smtp.gmail.com
 # EMAIL_PORT=587
@@ -63,10 +65,11 @@ The frontend will run on `http://localhost:5173`
 
 ```bash
 cd nvm-marketplace-backend
+set ADMIN_PASSWORD=ChangeMe-To-A-Strong-Secret!2026
 node scripts/createAdmin.js
 ```
 
-Follow the prompts to create your first admin account.
+This command creates the admin user or rotates the existing admin password for `ADMIN_EMAIL`.
 
 ### 2. Seed Data (Optional)
 
