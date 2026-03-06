@@ -9,8 +9,10 @@ import toast from 'react-hot-toast';
 
 export function Cart() {
   const navigate = useNavigate();
-  const { items, removeItem, updateQuantity, getTotal, clearCart, syncFromServer, syncing } = useCartStore();
-  const [qtyUpdatingByProductId, setQtyUpdatingByProductId] = useState<Record<string, boolean>>({});
+  const { items, removeItem, updateQuantity, getTotal, syncFromServer, syncing } = useCartStore();
+  
+  // Track which items are currently "in flight" to the server
+  const [loadingIds, setLoadingIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     syncFromServer().catch(() => {});
@@ -21,31 +23,30 @@ export function Cart() {
   const tax = subtotal * 0.15;
   const total = subtotal + shipping + tax;
 
-  const handleCheckout = () => {
-    if (items.length === 0) {
-      toast.error('Your cart is empty');
-      return;
-    }
-    navigate('/checkout');
-  };
+  // IMPROVED: Direct, clean logic for quantity changes
+  const adjustQuantity = async (productId: string, currentQty: number, adjustment: number) => {
+    const newQty = currentQty + adjustment;
 
-  // UPDATED: Now accepts currentQty directly to avoid "stale state" issues
-  const handleQuantityChange = async (productId: string, currentQty: number, delta: number) => {
-    if (qtyUpdatingByProductId[productId]) return;
+    // 1. Safety check: Don't go below 1
+    if (newQty < 1) return;
+    
+    // 2. Prevent double-clicks while updating
+    if (loadingIds.has(productId)) return;
 
-    const nextQty = currentQty + delta;
-    if (nextQty < 1) return;
+    // 3. Set loading state for this specific item
+    setLoadingIds(prev => new Set(prev).add(productId));
 
-    setQtyUpdatingByProductId((prev) => ({ ...prev, [productId]: true }));
     try {
-      await updateQuantity(productId, nextQty);
+      await updateQuantity(productId, newQty);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to update quantity');
+      toast.error('Could not update quantity');
+      console.error(error);
     } finally {
-      setQtyUpdatingByProductId((prev) => {
-        const copy = { ...prev };
-        delete copy[productId];
-        return copy;
+      // 4. Remove loading state
+      setLoadingIds(prev => {
+        const next = new Set(prev);
+        next.delete(productId);
+        return next;
       });
     }
   };
@@ -53,188 +54,93 @@ export function Cart() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 pb-24 sm:pb-12">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
-        >
-          <h1 className="text-3xl font-display font-bold text-nvm-dark-900 mb-2">
-            Shopping Cart
-          </h1>
-          <p className="text-gray-600">
-            {items.length} {items.length === 1 ? 'item' : 'items'} in your cart
-          </p>
-        </motion.div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
 
         {items.length === 0 ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center py-20"
-          >
-            <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <ShoppingBag className="w-12 h-12 text-gray-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-            <p className="text-gray-600 mb-8">Add some products to get started!</p>
-            <Link
-              to="/marketplace"
-              className="inline-flex items-center px-8 py-4 min-h-[44px] bg-nvm-green-primary text-white rounded-lg hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl"
-            >
-              Continue Shopping
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Link>
-          </motion.div>
+          <div className="text-center py-20 bg-white rounded-xl shadow-sm">
+            <ShoppingBag className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+            <h2 className="text-xl font-medium mb-4">Your cart is empty</h2>
+            <Link to="/marketplace" className="text-nvm-green-primary font-semibold">Start Shopping →</Link>
+          </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-4">
-              <AnimatePresence>
-                {items.map((item, index) => (
+              <AnimatePresence mode='popLayout'>
+                {items.map((item) => (
                   <motion.div
                     key={item.productId}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ delay: index * 0.05 }}
-                    className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 sm:p-6 hover:shadow-md transition-shadow"
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="bg-white p-6 rounded-xl shadow-sm flex gap-6 items-center"
                   >
-                    <div className="flex gap-4 sm:gap-6">
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        loading="lazy"
-                        className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <div className="flex justify-between items-start mb-2 gap-2">
-                          <div className="min-w-0">
-                            <h3 className="font-semibold text-nvm-dark-900 mb-1 truncate">{item.name}</h3>
-                            <p className="text-sm text-gray-500 truncate">{item.vendor.name}</p>
-                          </div>
+                    <img src={item.image} alt={item.name} className="w-20 h-20 object-cover rounded-lg" />
+                    
+                    <div className="flex-1">
+                      <h3 className="font-bold text-gray-900">{item.name}</h3>
+                      <p className="text-sm text-gray-500">{item.vendor?.name}</p>
+                      
+                      <div className="flex items-center justify-between mt-4">
+                        <div className="flex items-center border rounded-lg bg-gray-50">
+                          {/* MINUS BUTTON */}
                           <button
-                            onClick={async () => {
-                              try {
-                                await removeItem(item.productId);
-                                toast.success('Removed from cart');
-                              } catch (error: any) {
-                                toast.error(error?.response?.data?.message || 'Failed to remove item');
-                              }
-                            }}
-                            className="p-2 min-h-[44px] min-w-[44px] hover:bg-red-50 rounded-lg transition-colors group"
+                            onClick={() => adjustQuantity(item.productId, item.quantity, -1)}
+                            disabled={loadingIds.has(item.productId) || item.quantity <= 1}
+                            className="p-2 hover:text-nvm-green-primary disabled:opacity-30"
                           >
-                            <Trash2 className="w-5 h-5 text-gray-400 group-hover:text-red-500" />
+                            <Minus className="w-4 h-4" />
+                          </button>
+                          
+                          <span className="w-8 text-center font-medium">
+                            {loadingIds.has(item.productId) ? '...' : item.quantity}
+                          </span>
+                          
+                          {/* PLUS BUTTON */}
+                          <button
+                            onClick={() => adjustQuantity(item.productId, item.quantity, 1)}
+                            disabled={loadingIds.has(item.productId)}
+                            className="p-2 hover:text-nvm-green-primary disabled:opacity-30"
+                          >
+                            <Plus className="w-4 h-4" />
                           </button>
                         </div>
-
-                        <div className="flex items-center justify-between mt-4">
-                          <div className="flex items-center gap-2">
-                            {/* MINUS BUTTON */}
-                            <button
-                              onClick={() => handleQuantityChange(item.productId, item.quantity, -1)}
-                              disabled={Boolean(qtyUpdatingByProductId[item.productId]) || item.quantity <= 1}
-                              className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            
-                            <span className="w-10 text-center font-semibold">{item.quantity}</span>
-                            
-                            {/* PLUS BUTTON */}
-                            <button
-                              onClick={() => handleQuantityChange(item.productId, item.quantity, 1)}
-                              disabled={Boolean(qtyUpdatingByProductId[item.productId])}
-                              className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-nvm-gold-primary">
-                              {formatRands(item.price * item.quantity)}
-                            </p>
-                            <p className="text-xs text-gray-500">
-                              {formatRands(item.price)} each
-                            </p>
-                          </div>
+                        
+                        <div className="text-right">
+                          <p className="font-bold text-nvm-gold-primary">{formatRands(item.price * item.quantity)}</p>
+                          <button 
+                            onClick={() => removeItem(item.productId)}
+                            className="text-xs text-red-500 hover:underline mt-1"
+                          >
+                            Remove
+                          </button>
                         </div>
                       </div>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
-
-              <button
-                onClick={async () => {
-                  try {
-                    await clearCart();
-                    toast.success('Cart cleared');
-                  } catch (error: any) {
-                    toast.error(error?.response?.data?.message || 'Failed to clear cart');
-                  }
-                }}
-                className="w-full py-3 min-h-[44px] text-red-600 hover:text-red-700 font-medium transition-colors"
-              >
-                Clear Cart
-              </button>
             </div>
 
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="lg:col-span-1"
-            >
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 lg:sticky lg:top-24">
-                <h2 className="text-xl font-display font-bold text-nvm-dark-900 mb-6">
-                  Order Summary
-                </h2>
-
-                <div className="space-y-4 mb-6">
-                  <div className="flex justify-between text-gray-600">
-                    <span>Subtotal</span>
-                    <span className="font-semibold">{formatRands(subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>Shipping</span>
-                    <span className="font-semibold">{formatRands(shipping)}</span>
-                  </div>
-                  <div className="flex justify-between text-gray-600">
-                    <span>VAT (15%)</span>
-                    <span className="font-semibold">{formatRands(tax)}</span>
-                  </div>
-                  <div className="border-t border-gray-200 pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-bold text-nvm-dark-900">Total</span>
-                      <span className="text-2xl font-bold text-nvm-gold-primary">
-                        {formatRands(total)}
-                      </span>
-                    </div>
-                  </div>
+            {/* SUMMARY SIDEBAR */}
+            <div className="bg-white p-6 rounded-xl shadow-sm h-fit sticky top-24">
+              <h2 className="text-xl font-bold mb-6">Order Summary</h2>
+              <div className="space-y-3 pb-6 border-bottom">
+                <div className="flex justify-between"><span>Subtotal</span><span>{formatRands(subtotal)}</span></div>
+                <div className="flex justify-between"><span>Shipping</span><span>{formatRands(shipping)}</span></div>
+                <div className="flex justify-between"><span>VAT (15%)</span><span>{formatRands(tax)}</span></div>
+                <div className="flex justify-between font-bold text-lg pt-3 border-t">
+                  <span>Total</span><span className="text-nvm-gold-primary">{formatRands(total)}</span>
                 </div>
-
-                <button
-                  onClick={handleCheckout}
-                  className="w-full py-4 min-h-[44px] bg-nvm-green-primary text-white rounded-lg font-semibold hover:bg-nvm-green-600 transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
-                >
-                  Proceed to Checkout
-                  <ArrowRight className="w-5 h-5" />
-                </button>
-
-                <Link
-                  to="/marketplace"
-                  className="block w-full py-3 text-center text-nvm-green-primary font-medium hover:text-nvm-green-600 transition-colors mt-4"
-                >
-                  Continue Shopping
-                </Link>
               </div>
-            </motion.div>
-          </div>
-        )}
-
-        {syncing && (
-          <div className="fixed bottom-4 right-4 bg-white border border-gray-200 shadow-sm rounded-lg px-3 py-2 text-xs text-gray-600">
-            Syncing cart...
+              <button 
+                onClick={() => navigate('/checkout')}
+                className="w-full bg-nvm-green-primary text-white py-4 rounded-lg font-bold mt-4 hover:bg-opacity-90 transition-all"
+              >
+                Proceed to Checkout
+              </button>
+            </div>
           </div>
         )}
       </div>
