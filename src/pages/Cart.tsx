@@ -4,8 +4,22 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { useCartStore } from '../lib/store';
 import { formatRands } from '../lib/currency';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, ShieldCheck, Truck } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Sparkles, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
+
+// Animation variants for the list items
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: { opacity: 1, y: 0 }
+};
 
 export function Cart() {
   const navigate = useNavigate();
@@ -40,193 +54,193 @@ export function Cart() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC]">
+    <div className="min-h-screen bg-white">
       <Navbar />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        {/* Header Section */}
-        <header className="mb-10">
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-            Your Cart
-          </h1>
-          <p className="text-slate-500 mt-2 text-lg">
-            {items.length === 0 ? 'Review your items and checkout' : `You have ${items.length} premium items ready.`}
-          </p>
-        </header>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header with entrance animation */}
+        <motion.header 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-end gap-4 mb-12"
+        >
+          <h1 className="text-4xl font-bold text-nvm-dark-900">My Cart</h1>
+          <div className="h-8 w-px bg-gray-200 mb-1" />
+          <span className="text-gray-500 mb-1 font-medium">{items.length} Items</span>
+        </motion.header>
 
         {items.length === 0 ? (
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-slate-300 shadow-sm"
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col items-center justify-center py-32 rounded-3xl bg-gray-50 border border-gray-100"
           >
-            <div className="bg-slate-50 p-6 rounded-full mb-6">
-              <ShoppingBag className="w-16 h-16 text-slate-300" />
-            </div>
-            <h2 className="text-2xl font-bold text-slate-900">Your cart is feeling light</h2>
-            <p className="text-slate-500 mt-2 mb-8 text-center max-w-xs">
-              Explore our marketplace to find something special for your collection.
-            </p>
+            <ShoppingBag className="w-16 h-16 text-gray-200 mb-6" />
+            <h2 className="text-2xl font-bold text-gray-800">Your cart is empty</h2>
             <Link
               to="/marketplace"
-              className="flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-full font-semibold hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+              className="mt-6 flex items-center gap-2 px-8 py-3 bg-nvm-green-primary text-white rounded-full font-bold hover:shadow-lg transition-all active:scale-95"
             >
-              Start Shopping <ArrowRight className="w-5 h-5" />
+              Back to Marketplace <ArrowRight className="w-4 h-4" />
             </Link>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            {/* Items List */}
-            <div className="lg:col-span-8 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            {/* Products List */}
+            <motion.div 
+              variants={containerVariants}
+              initial="hidden"
+              animate="show"
+              className="lg:col-span-8 space-y-6"
+            >
               <AnimatePresence mode="popLayout">
                 {items.map((item) => (
                   <motion.div
                     key={item.productId}
+                    variants={itemVariants}
                     layout
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="group bg-white rounded-2xl p-4 sm:p-6 flex flex-col sm:flex-row gap-6 border border-slate-100 shadow-sm hover:shadow-md transition-all duration-300"
+                    exit={{ opacity: 0, scale: 0.8, transition: { duration: 0.2 } }}
+                    className="relative group bg-white border-b border-gray-100 pb-8 flex flex-col sm:flex-row gap-6 items-center"
                   >
-                    {/* Product Image */}
-                    <div className="relative overflow-hidden rounded-xl bg-slate-100 aspect-square w-full sm:w-32 h-32">
+                    <div className="relative w-32 h-32 flex-shrink-0">
                       <img
                         src={item.image}
                         alt={item.name}
-                        className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                        className="w-full h-full object-cover rounded-2xl shadow-sm group-hover:shadow-md transition-shadow"
                       />
+                      {loadingIds.has(item.productId) && (
+                        <div className="absolute inset-0 bg-white/60 backdrop-blur-[2px] rounded-2xl flex items-center justify-center">
+                          <div className="w-6 h-6 border-2 border-nvm-green-primary border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      )}
                     </div>
 
-                    {/* Details */}
-                    <div className="flex-1 flex flex-col justify-between">
+                    <div className="flex-1 w-full text-center sm:text-left">
                       <div className="flex justify-between items-start">
                         <div>
-                          <h3 className="text-lg font-bold text-slate-900 group-hover:text-nvm-green-primary transition-colors">
-                            {item.name}
-                          </h3>
-                          <p className="text-sm font-medium text-slate-400 mt-1 uppercase tracking-wider">
-                            {item.vendor?.name}
-                          </p>
+                          <h3 className="text-xl font-bold text-nvm-dark-900">{item.name}</h3>
+                          <p className="text-nvm-green-primary font-medium text-sm">{item.vendor?.name}</p>
                         </div>
                         <button
                           onClick={() => removeItem(item.productId)}
-                          className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-full transition-all"
+                          className="text-gray-300 hover:text-red-500 transition-colors p-2"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
 
                       <div className="flex items-center justify-between mt-6">
-                        {/* Modern Stepper */}
-                        <div className="flex items-center bg-slate-50 rounded-full p-1 border border-slate-200">
-                          <button
+                        {/* Custom Animated Stepper */}
+                        <div className="flex items-center bg-gray-50 rounded-xl p-1">
+                          <motion.button
+                            whileTap={{ scale: 0.8 }}
                             onClick={() => adjustQuantity(item.productId, item.quantity, -1)}
                             disabled={loadingIds.has(item.productId) || item.quantity <= 1}
-                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm text-slate-600 disabled:opacity-30 transition-all"
+                            className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-nvm-dark-900 disabled:opacity-20"
                           >
-                            <Minus className="w-3.5 h-3.5" />
-                          </button>
-                          <span className="w-10 text-center text-sm font-bold text-slate-900">
-                            {loadingIds.has(item.productId) ? (
-                              <span className="animate-pulse">...</span>
-                            ) : (
-                              item.quantity
-                            )}
-                          </span>
-                          <button
+                            <Minus className="w-4 h-4" />
+                          </motion.button>
+                          
+                          <motion.span 
+                            key={item.quantity}
+                            initial={{ y: 5, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="w-8 text-center font-bold text-nvm-dark-900"
+                          >
+                            {item.quantity}
+                          </motion.span>
+
+                          <motion.button
+                            whileTap={{ scale: 0.8 }}
                             onClick={() => adjustQuantity(item.productId, item.quantity, 1)}
                             disabled={loadingIds.has(item.productId)}
-                            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-white hover:shadow-sm text-slate-600 disabled:opacity-30 transition-all"
+                            className="w-10 h-10 flex items-center justify-center text-gray-500 hover:text-nvm-dark-900 disabled:opacity-20"
                           >
-                            <Plus className="w-3.5 h-3.5" />
-                          </button>
+                            <Plus className="w-4 h-4" />
+                          </motion.button>
                         </div>
 
                         <div className="text-right">
-                          <p className="text-xl font-black text-slate-900">
+                          <p className="text-2xl font-bold text-nvm-gold-primary leading-none">
                             {formatRands(item.price * item.quantity)}
                           </p>
-                          <p className="text-xs text-slate-400 font-medium">{formatRands(item.price)} per unit</p>
+                          <p className="text-xs text-gray-400 mt-1 uppercase tracking-tighter">Subtotal</p>
                         </div>
                       </div>
                     </div>
                   </motion.div>
                 ))}
               </AnimatePresence>
+            </motion.div>
 
-              {/* Action Buttons */}
-              <div className="flex justify-between items-center pt-4">
-                <Link to="/marketplace" className="text-slate-600 hover:text-slate-900 font-semibold flex items-center gap-2 group transition-all">
-                   <span className="group-hover:-translate-x-1 transition-transform">←</span> Continue Shopping
-                </Link>
-                <button 
-                  onClick={() => {}} // Add clear cart function if available
-                  className="text-sm text-slate-400 hover:text-red-500 font-medium transition-colors"
-                >
-                  Clear all items
-                </button>
-              </div>
-            </div>
+            {/* Sidebar Summary */}
+            <motion.aside 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="lg:col-span-4"
+            >
+              <div className="bg-gray-50/50 backdrop-blur-md rounded-[32px] p-8 border border-gray-100 sticky top-24">
+                <div className="flex items-center gap-2 mb-8">
+                  <Sparkles className="w-5 h-5 text-nvm-gold-primary" />
+                  <h2 className="text-2xl font-bold text-nvm-dark-900">Order Summary</h2>
+                </div>
 
-            {/* Modern Sidebar Summary */}
-            <aside className="lg:col-span-4">
-              <div className="bg-slate-900 text-white rounded-3xl p-8 sticky top-24 shadow-2xl shadow-slate-200 overflow-hidden relative">
-                {/* Visual Accent Decoration */}
-                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
-                
-                <h2 className="text-2xl font-bold mb-8">Summary</h2>
-                
-                <div className="space-y-4 text-slate-300">
-                  <div className="flex justify-between">
-                    <span className="font-medium">Subtotal</span>
-                    <span className="text-white font-bold">{formatRands(subtotal)}</span>
+                <div className="space-y-4 mb-8">
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>Subtotal</span>
+                    <span>{formatRands(subtotal)}</span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-2 font-medium">
-                      Shipping <Truck className="w-4 h-4 text-slate-400" />
-                    </span>
-                    <span className="text-white font-bold">{formatRands(shipping)}</span>
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>Shipping</span>
+                    <span>{formatRands(shipping)}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="font-medium">VAT (15%)</span>
-                    <span className="text-white font-bold">{formatRands(tax)}</span>
+                  <div className="flex justify-between text-gray-600 font-medium">
+                    <span>VAT (15%)</span>
+                    <span>{formatRands(tax)}</span>
                   </div>
-                  
-                  <div className="h-px bg-slate-800 my-6" />
-                  
-                  <div className="flex justify-between items-end">
-                    <span className="text-lg font-bold">Total</span>
-                    <div className="text-right">
-                      <p className="text-3xl font-black text-white">{formatRands(total)}</p>
+                  <div className="pt-6 border-t border-gray-200">
+                    <div className="flex justify-between items-end">
+                      <span className="text-gray-900 font-bold">Total Amount</span>
+                      <span className="text-3xl font-black text-nvm-gold-primary">
+                        {formatRands(total)}
+                      </span>
                     </div>
                   </div>
                 </div>
 
-                <button
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
                   onClick={() => navigate('/checkout')}
-                  className="w-full mt-10 py-5 bg-white text-slate-900 rounded-2xl font-bold text-lg hover:bg-slate-100 transition-all flex items-center justify-center gap-3 active:scale-95"
+                  className="w-full py-5 bg-nvm-green-primary text-white rounded-2xl font-bold text-lg shadow-xl shadow-nvm-green-primary/20 hover:bg-nvm-green-600 transition-all flex items-center justify-center gap-3"
                 >
-                  Secure Checkout <ShieldCheck className="w-5 h-5" />
-                </button>
+                  Checkout Now <CreditCard className="w-5 h-5" />
+                </motion.button>
 
-                <div className="mt-8 flex flex-col items-center gap-4 text-slate-400 text-xs">
-                  <p className="flex items-center gap-2 italic">
-                    <ShieldCheck className="w-3.5 h-3.5" /> 256-bit SSL encrypted payment
-                  </p>
-                </div>
+                <p className="mt-6 text-center text-xs text-gray-400 font-medium px-4">
+                  Shipping costs are calculated based on your location and will be finalized at checkout.
+                </p>
               </div>
-            </aside>
+            </motion.aside>
           </div>
         )}
       </main>
 
-      {/* Syncing Indicator */}
-      {syncing && (
-        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-6 py-3 rounded-full text-sm font-bold shadow-2xl flex items-center gap-3 z-50 animate-bounce">
-          <div className="w-2 h-2 bg-nvm-green-primary rounded-full animate-ping" />
-          Updating your cart...
-        </div>
-      )}
+      {/* Floating Sync State */}
+      <AnimatePresence>
+        {syncing && (
+          <motion.div 
+            initial={{ y: 100, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 100, opacity: 0 }}
+            className="fixed bottom-8 left-8 bg-nvm-dark-900 text-white px-6 py-3 rounded-2xl flex items-center gap-3 shadow-2xl z-50"
+          >
+            <div className="w-2 h-2 bg-nvm-green-primary rounded-full animate-ping" />
+            <span className="text-sm font-bold tracking-wide">Syncing your cart...</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
