@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
@@ -29,11 +29,10 @@ export function Cart() {
     navigate('/checkout');
   };
 
-  const handleQuantityChange = async (productId: string, delta: number) => {
+  // UPDATED: Now accepts currentQty directly to avoid "stale state" issues
+  const handleQuantityChange = async (productId: string, currentQty: number, delta: number) => {
     if (qtyUpdatingByProductId[productId]) return;
 
-    const latestItem = useCartStore.getState().items.find((entry) => entry.productId === productId);
-    const currentQty = Number(latestItem?.quantity || 0);
     const nextQty = currentQty + delta;
     if (nextQty < 1) return;
 
@@ -131,18 +130,22 @@ export function Cart() {
 
                         <div className="flex items-center justify-between mt-4">
                           <div className="flex items-center gap-2">
+                            {/* MINUS BUTTON */}
                             <button
-                              onClick={() => handleQuantityChange(item.productId, -1)}
+                              onClick={() => handleQuantityChange(item.productId, item.quantity, -1)}
                               disabled={Boolean(qtyUpdatingByProductId[item.productId]) || item.quantity <= 1}
-                              className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors"
+                              className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Minus className="w-4 h-4" />
                             </button>
+                            
                             <span className="w-10 text-center font-semibold">{item.quantity}</span>
+                            
+                            {/* PLUS BUTTON */}
                             <button
-                              onClick={() => handleQuantityChange(item.productId, 1)}
+                              onClick={() => handleQuantityChange(item.productId, item.quantity, 1)}
                               disabled={Boolean(qtyUpdatingByProductId[item.productId])}
-                              className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors"
+                              className="w-10 h-10 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg border-2 border-gray-200 hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Plus className="w-4 h-4" />
                             </button>
@@ -238,4 +241,3 @@ export function Cart() {
     </div>
   );
 }
-
