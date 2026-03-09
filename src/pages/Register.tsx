@@ -52,7 +52,9 @@ export function Register() {
       if (isConnectionError) {
         toast.error('Server is unreachable. If using Render free tier, it may be starting up — please try again in 30–60 seconds.');
       } else {
-        toast.error(error.response?.data?.message || 'Registration failed');
+        const data = error.response?.data;
+        const firstError = data?.errors?.[0]?.msg;
+        toast.error(firstError || data?.message || 'Registration failed');
       }
     } finally {
       setIsLoading(false);
