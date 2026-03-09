@@ -5,11 +5,15 @@ const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').re
 // #region agent log
 function _dbgLog(location: string, message: string, data: Record<string, unknown>, hypothesisId: string) {
   const payload = { sessionId: '7840a6', location, message, data, timestamp: Date.now(), hypothesisId };
-  fetch('http://127.0.0.1:7469/ingest/5d631cb0-b818-47aa-aa02-aaea8bc641b1', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '7840a6' },
-    body: JSON.stringify(payload)
-  }).catch(() => {});
+  // Only attempt to send debug telemetry to a local agent when explicitly enabled.
+  // Control with VITE_ENABLE_LOCAL_AGENT (set to 'true' to enable).
+  if (String(import.meta.env.VITE_ENABLE_LOCAL_AGENT || '').toLowerCase() === 'true') {
+    fetch('http://127.0.0.1:7469/ingest/5d631cb0-b818-47aa-aa02-aaea8bc641b1', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '7840a6' },
+      body: JSON.stringify(payload)
+    }).catch(() => {});
+  }
 }
 // #endregion
 
