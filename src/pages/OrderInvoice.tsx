@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
-import { invoicesAPI } from '../lib/api';
+import { invoicesAPI, ordersAPI } from '../lib/api';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
 import { 
@@ -24,64 +24,77 @@ export function OrderInvoice() {
   const [invoice, setInvoice] = useState<any>(null);
   const [invoiceId, setInvoiceId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fulfilment, setFulfilment] = useState<{ method: 'DELIVERY' | 'PICKUP'; label: string } | null>(null);
 
   useEffect(() => {
-    if (orderId) {
-      fetchInvoice();
-    }
-  }, [orderId]);
+    const load = async () => {
+      if (!orderId) return;
+      try {
+        const [invoiceRes, orderRes] = await Promise.all([
+          invoicesAPI.getData(orderId),
+          ordersAPI.getMyOrderById(orderId)
+        ]);
 
-  const fetchInvoice = async () => {
-    try {
-      const response = await invoicesAPI.getData(orderId!);
-      const payload = response.data.data;
-      if (Array.isArray(payload)) {
-        const customerInvoice = payload.find((inv: any) => inv.type === 'CUSTOMER') || payload[0];
-        const vendorInvoices = payload.filter((inv: any) => inv.type === 'VENDOR');
-        setInvoiceId(customerInvoice?._id || null);
-        setInvoice({
-          orderNumber: customerInvoice?.metadata?.orderNumber || orderId,
-          date: customerInvoice?.issuedAt,
-          customer: {
-            name: customerInvoice?.billingDetails?.name || '-',
-            email: customerInvoice?.billingDetails?.email || '-',
-            phone: customerInvoice?.billingDetails?.phone || '-'
-          },
-          shippingAddress: customerInvoice?.billingDetails?.address || {},
-          vendors: vendorInvoices.map((inv: any) => ({
-            vendor: {
-              storeName: inv.vendorDetails?.storeName || 'Vendor',
-              email: inv.vendorDetails?.contact?.email || '-',
-              phone: inv.vendorDetails?.contact?.phone || '-',
-              address: inv.vendorDetails?.location || {},
-              bankDetails: inv.vendorDetails?.banking || null
+        const payload = invoiceRes.data.data;
+        if (Array.isArray(payload)) {
+          const customerInvoice = payload.find((inv: any) => inv.type === 'CUSTOMER') || payload[0];
+          const vendorInvoices = payload.filter((inv: any) => inv.type === 'VENDOR');
+          setInvoiceId(customerInvoice?._id || null);
+          setInvoice({
+            orderNumber: customerInvoice?.metadata?.orderNumber || orderId,
+            date: customerInvoice?.issuedAt,
+            customer: {
+              name: customerInvoice?.billingDetails?.name || '-',
+              email: customerInvoice?.billingDetails?.email || '-',
+              phone: customerInvoice?.billingDetails?.phone || '-'
             },
-            items: (inv.lineItems || []).map((line: any, idx: number) => ({
-              id: `${inv._id}-${idx}`,
-              name: line.titleSnapshot,
-              price: line.unitPrice,
-              quantity: line.qty,
-              subtotal: line.lineTotal
-            }))
-          })),
-          subtotal: customerInvoice?.totals?.subtotal || 0,
-          shippingCost: customerInvoice?.totals?.deliveryFee || 0,
-          tax: customerInvoice?.totals?.tax || 0,
-          discount: customerInvoice?.totals?.discount || 0,
-          total: customerInvoice?.totals?.total || 0,
-          paymentMethod: customerInvoice?.metadata?.paymentMethod || '',
-          paymentStatus: (customerInvoice?.metadata?.paymentStatus || '').toLowerCase()
-        });
-      } else {
-        setInvoice(payload);
+            shippingAddress: customerInvoice?.billingDetails?.address || {},
+            vendors: vendorInvoices.map((inv: any) => ({
+              vendor: {
+                storeName: inv.vendorDetails?.storeName || 'Vendor',
+                email: inv.vendorDetails?.contact?.email || '-',
+                phone: inv.vendorDetails?.contact?.phone || '-',
+                address: inv.vendorDetails?.location || {},
+                bankDetails: inv.vendorDetails?.banking || null
+              },
+              items: (inv.lineItems || []).map((line: any, idx: number) => ({
+                id: `${inv._id}-${idx}`,
+                name: line.titleSnapshot,
+                price: line.unitPrice,
+                quantity: line.qty,
+                subtotal: line.lineTotal
+              }))
+            })),
+            subtotal: customerInvoice?.totals?.subtotal || 0,
+            shippingCost: customerInvoice?.totals?.deliveryFee || 0,
+            tax: customerInvoice?.totals?.tax || 0,
+            discount: customerInvoice?.totals?.discount || 0,
+            total: customerInvoice?.totals?.total || 0,
+            paymentMethod: customerInvoice?.metadata?.paymentMethod || '',
+            paymentStatus: (customerInvoice?.metadata?.paymentStatus || '').toLowerCase()
+          });
+        } else {
+          setInvoice(payload);
+        }
+
+        const order = orderRes.data?.data;
+        if (order) {
+          const method = String(order.deliveryMethod || '').toUpperCase() === 'PICKUP' ? 'PICKUP' : 'DELIVERY';
+          setFulfilment({
+            method: method as 'DELIVERY' | 'PICKUP',
+            label: method === 'PICKUP' ? 'Collection / Pickup' : 'Delivery'
+          });
+        }
+      } catch (error: any) {
+        toast.error(error.response?.data?.message || 'Failed to load invoice');
+        navigate(-1);
+      } finally {
+        setLoading(false);
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to load invoice');
-      navigate(-1);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    load();
+  }, [orderId, navigate]);
 
   const handlePrint = () => {
     window.print();
@@ -194,6 +207,11 @@ export function OrderInvoice() {
                   day: 'numeric' 
                 })}
               </p>
+              {fulfilment && (
+                <p className="text-sm text-gray-600">
+                  Fulfilment: <span className="font-semibold">{fulfilment.label}</span>
+                </p>
+              )}
               <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${
                 invoice.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
                 invoice.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :

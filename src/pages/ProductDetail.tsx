@@ -18,6 +18,7 @@ export function ProductDetail() {
   const [product, setProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [similarProducts, setSimilarProducts] = useState<any[]>([]);
   const [questions, setQuestions] = useState<any[]>([]);
   const [newQuestion, setNewQuestion] = useState('');
@@ -38,6 +39,7 @@ export function ProductDetail() {
       const response = await productsAPI.getById(id!);
       const productData = response.data.data;
       setProduct(productData);
+      setSelectedImageIndex(0);
       productsAPI.getSimilar(productData._id, { limit: 8 }).then((res) => setSimilarProducts(res.data.data || [])).catch(() => {});
       productsAPI.getQuestions(productData._id, { limit: 10 }).then((res) => setQuestions(res.data.data || [])).catch(() => {});
       trackingAPI.trackProductView({
@@ -146,6 +148,11 @@ export function ProductDetail() {
     );
   }
 
+  const imageUrls: string[] = Array.isArray(product.images)
+    ? product.images.map((img: any) => img?.url || img).filter(Boolean)
+    : [];
+  const mainImage = imageUrls[selectedImageIndex] || product.images?.[0]?.url || '/placeholder-product.png';
+
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar />
@@ -165,14 +172,37 @@ export function ProductDetail() {
           className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8"
         >
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Product Image */}
-            <div className="relative h-96 lg:h-auto bg-gray-100">
-              <img 
-                src={product.images[0]?.url || '/placeholder-product.png'} 
-                alt={product.name} 
-                loading="lazy"
-                className="w-full h-full object-cover" 
-              />
+            {/* Product Images */}
+            <div className="relative bg-gray-100 flex flex-col gap-4 p-4">
+              <div className="relative h-80 sm:h-96 lg:h-[420px] bg-gray-100 rounded-xl overflow-hidden">
+                <img 
+                  src={mainImage} 
+                  alt={product.name} 
+                  loading="lazy"
+                  className="w-full h-full object-cover" 
+                />
+              </div>
+              {imageUrls.length > 1 && (
+                <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+                  {imageUrls.map((url, index) => (
+                    <button
+                      key={url + index}
+                      type="button"
+                      onClick={() => setSelectedImageIndex(index)}
+                      className={`relative flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                        index === selectedImageIndex ? 'border-nvm-green-primary' : 'border-transparent'
+                      }`}
+                    >
+                      <img
+                        src={url}
+                        alt={`${product.name} thumbnail ${index + 1}`}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                      />
+                    </button>
+                  ))}
+                </div>
+              )}
               {product.category && (
                 <div className="absolute top-4 left-4">
                   <span className="px-3 py-1 bg-white/90 backdrop-blur-md text-sm font-bold text-gray-800 rounded-full shadow-sm">
@@ -243,11 +273,15 @@ export function ProductDetail() {
                 {product.description}
               </p>
 
-              {/* Features */}
-              <div className="space-y-3 mb-8 p-4 bg-gray-50 rounded-lg">
+              {/* Key Details & Features */}
+              <div className="space-y-4 mb-8 p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center text-gray-700">
                   <Truck className="w-5 h-5 mr-3 text-nvm-green-600" />
-                  <span>{product.shipping?.freeShipping ? 'Free Shipping' : `Shipping: ${formatRands(product.shipping?.shippingCost || 0)}`}</span>
+                  <span>
+                    {product.shipping?.freeShipping
+                      ? 'Free Shipping'
+                      : `Shipping from ${formatRands(product.shipping?.shippingCost || 0)} (final fee shown at checkout based on your location)`}
+                  </span>
                 </div>
                 <div className="flex items-center text-gray-700">
                   <ShieldCheck className="w-5 h-5 mr-3 text-nvm-green-600" />

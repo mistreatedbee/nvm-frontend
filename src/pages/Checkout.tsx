@@ -47,6 +47,10 @@ export function Checkout() {
   const [qtyUpdatingByProductId, setQtyUpdatingByProductId] = useState<Record<string, boolean>>({});
   const checkoutIdempotencyKeyRef = useRef('');
   const debugCheckout = import.meta.env.DEV || localStorage.getItem('DEBUG_CHECKOUT') === 'true';
+  const [availableMethods, setAvailableMethods] = useState<{ delivery: boolean; pickup: boolean }>({
+    delivery: true,
+    pickup: true
+  });
 
   const {
     register,
@@ -91,11 +95,25 @@ export function Checkout() {
     () => cartItems.reduce((sum, item) => sum + Number(item.priceSnapshot || 0) * Number(item.qty || 0), 0),
     [cartItems]
   );
-  const shipping = deliveryMethod === 'PICKUP' ? 0 : (quotedShipping ?? (cartItems.length ? 50 : 0));
-  const tax = subtotal * 0.15;
+  const [previewTotals, setPreviewTotals] = useState<{
+    deliveryFee: number;
+    tax: number;
+    discount: number;
+    total: number;
+  } | null>(null);
+
+  const shipping =
+    deliveryMethod === 'PICKUP'
+      ? 0
+      : previewTotals?.deliveryFee ?? quotedShipping ?? (cartItems.length ? 50 : 0);
+  const tax = previewTotals?.tax ?? subtotal * 0.15;
   const totalBeforeDiscount = subtotal + shipping + tax;
-  const totalDiscount = Math.min(totalBeforeDiscount, promoDiscount + giftCardApplied);
-  const total = Math.max(0, totalBeforeDiscount - totalDiscount);
+  const totalDiscount = Math.min(
+    totalBeforeDiscount,
+    promoDiscount + giftCardApplied,
+    previewTotals?.discount ?? Infinity
+  );
+  const total = previewTotals?.total ?? Math.max(0, totalBeforeDiscount - totalDiscount);
 
   const handleCheckoutQuantityChange = async (productId: string, delta: number) => {
     if (qtyUpdatingByProductId[productId]) return;
@@ -123,6 +141,44 @@ export function Checkout() {
         delete next[productId];
         return next;
       });
+    }
+  };
+
+  const refreshPreview = async (addressPayload: any, effectiveDeliveryMethod: 'DELIVERY' | 'PICKUP') => {
+    try {
+      if (!cartItems.length) return;
+      const discountAmount = promoDiscount + giftCardApplied;
+      const res = await checkoutAPI.preview({
+        address: addressPayload,
+        deliveryMethod: effectiveDeliveryMethod,
+        discount: discountAmount
+      });
+      const data = res.data?.data;
+      if (data) {
+        const methods = Array.isArray(data.deliveryOptions)
+          ? data.deliveryOptions.map((opt: any) => opt.method)
+          : [];
+        setAvailableMethods({
+          delivery: methods.includes('DELIVERY'),
+          pickup: methods.includes('PICKUP')
+        });
+
+        setPreviewTotals({
+          deliveryFee: Number(data.deliveryFee || 0),
+          tax: Number(data.tax || 0),
+          discount: Number(data.discount || 0),
+          total: Number(data.total || 0)
+        });
+        if (effectiveDeliveryMethod === 'DELIVERY') {
+          setQuotedShipping(Number(data.deliveryFee || 0));
+        }
+      }
+    } catch (error: any) {
+      setPreviewTotals(null);
+      const message =
+        error.response?.data?.message ||
+        'We could not calculate an accurate total for this address. Please update your address or choose collection where available.';
+      toast.error(message);
     }
   };
 
@@ -176,23 +232,7 @@ export function Checkout() {
         }
       }
 
-      if (Number.isFinite(Number(shippingAddressPayload.lat)) && Number.isFinite(Number(shippingAddressPayload.lng))) {
-        try {
-          const quoteRes = await logisticsAPI.quote({
-            address: shippingAddressPayload,
-            cartItems: freshCartItems.map((item: any) => ({
-              productId: item.productId,
-              quantity: item.qty,
-              price: item.priceSnapshot
-            }))
-          });
-          const options = quoteRes.data?.data?.options || [];
-          const option = options.find((entry: any) => entry.method === deliveryMethod);
-          if (option) {
-            setQuotedShipping(Number(option.fee || 0));
-          }
-        } catch (_error) {}
-      }
+      await refreshPreview(shippingAddressPayload, deliveryMethod);
 
       const orderData = {
         items: freshCartItems.map((item: any) => ({
@@ -505,12 +545,24 @@ export function Checkout() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Method</label>
                     <select
                       value={deliveryMethod}
-                      onChange={(e) => setDeliveryMethod(e.target.value as 'DELIVERY' | 'PICKUP')}
+                      onChange={(e) => {
+                        setDeliveryMethod(e.target.value as 'DELIVERY' | 'PICKUP');
+                        setPreviewTotals(null);
+                      }}
                       className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg"
                     >
-                      <option value="DELIVERY">Delivery</option>
-                      <option value="PICKUP">Pickup</option>
+                      <option value="DELIVERY" disabled={!availableMethods.delivery}>
+                        Delivery
+                      </option>
+                      <option value="PICKUP" disabled={!availableMethods.pickup}>
+                        Pickup / Collection
+                      </option>
                     </select>
+                    {!availableMethods.pickup && (
+                      <p className="mt-1 text-xs text-gray-500">
+                        Pickup is not available for every item in your cart.
+                      </p>
+                    )}
                   </div>
                   {isAuthenticated && !selectedAddressId && (
                     <div className="md:col-span-2">

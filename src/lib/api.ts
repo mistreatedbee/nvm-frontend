@@ -545,6 +545,8 @@ export const addressesAPI = {
 export const checkoutAPI = {
   applyPromo: (code: string, subtotal: number) => api.post('/checkout/promo/apply', { code, subtotal }),
   redeemGiftCard: (code: string, total: number) => api.post('/checkout/gift-card/redeem', { code, total }),
+  preview: (data: { address: any; deliveryMethod: 'DELIVERY' | 'PICKUP'; discount?: number }) =>
+    api.post('/checkout/preview', data),
 };
 
 export const logisticsAPI = {

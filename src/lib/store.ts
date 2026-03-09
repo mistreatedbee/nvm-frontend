@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { cartAPI, wishlistAPI } from './api';
 
@@ -107,17 +107,6 @@ export const useCartStore = create<CartState>()(
         });
 
         const previous = get().items;
-        const existingItem = previous.find((i) => i.productId === item.productId);
-
-        const optimistic = existingItem
-          ? previous.map((i) =>
-              i.productId === item.productId
-                ? { ...i, quantity: i.quantity + item.quantity }
-                : i
-            )
-          : [...previous, item];
-
-        set({ items: optimistic });
 
         try {
           const idempotencyKey = `cart-add-${item.productId}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
