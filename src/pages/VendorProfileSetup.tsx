@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
 import { useNavigate } from 'react-router-dom';
 import { vendorsAPI } from '../lib/api';
+import { useAuthStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import {
   Store,
@@ -50,7 +51,15 @@ const PROVINCES = [
 
 export function VendorProfileSetup() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuthStore();
   const [step, setStep] = useState(1);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to become a vendor');
+      navigate('/login?redirect=/vendor/setup');
+    }
+  }, [isAuthenticated, navigate]);
   const [formData, setFormData] = useState({
     // Store Information
     storeName: '',
@@ -158,6 +167,10 @@ export function VendorProfileSetup() {
       toast.error('Please fill in all required fields');
     }
   };
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const handleSubmit = async () => {
     if (!validateStep()) {

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import { vendorsAPI } from '../lib/api';
+import { useAuthStore } from '../lib/store';
 import { Navbar } from '../components/Navbar';
 import { 
   Store, 
@@ -56,7 +57,15 @@ interface VendorRegistrationForm {
 
 export function VendorRegistration() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuthStore();
   const [currentStep, setCurrentStep] = useState(1);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      toast.error('Please log in to register as a vendor');
+      navigate('/login?redirect=/vendor/register');
+    }
+  }, [isAuthenticated, navigate]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -246,6 +255,10 @@ export function VendorRegistration() {
       window.location.reload();
     }
   };
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">

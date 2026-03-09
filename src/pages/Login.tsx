@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { authAPI } from '../lib/api';
@@ -13,6 +13,8 @@ interface LoginForm {
 
 export function Login() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = searchParams.get('redirect');
   const { setAuth } = useAuthStore();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -47,6 +49,9 @@ export function Login() {
         });
         // Redirect to admin dashboard
         setTimeout(() => navigate('/admin'), 1000);
+      } else if (redirectTo && redirectTo.startsWith('/')) {
+        toast.success('Logged in successfully!');
+        navigate(redirectTo);
       } else if (user.role === 'vendor') {
         toast.success('Logged in successfully!');
         navigate('/vendor/dashboard');
