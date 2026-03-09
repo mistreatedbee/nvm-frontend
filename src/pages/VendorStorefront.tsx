@@ -1,0 +1,288 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { MapPin, Star, Share2, Store, Mail, Phone, Globe, MessageSquare } from 'lucide-react';
+import { Navbar } from '../components/Navbar';
+import { ProductCard } from '../components/ProductCard';
+import { VendorReviews } from '../components/VendorReviews';
+import { vendorsAPI, productsAPI, vendorStoreAPI } from '../lib/api';
+import { useAuthStore } from '../lib/store';
+import toast from 'react-hot-toast';
+
+export function VendorStorefront() {
+  const { id, slug } = useParams();
+  const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuthStore();
+  const [vendor, setVendor] = useState<any>(null);
+  const [products, setProducts] = useState<any[]>([]);
+  const [ratingSummary, setRatingSummary] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState('newest');
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    if (slug || id) {
+      fetchVendorAndProducts();
+    }
+  }, [slug, id]);
+
+  const fetchVendorAndProducts = async () => {
+    try {
+      let vendorData: any = null;
+      let productsFromStoreApiLoaded = false;
+      if (slug) {
+        try {
+          const fullStoreRes = await vendorStoreAPI.getPublicBySlug(slug);
+          vendorData = fullStoreRes.data.data?.store;
+          const initialProducts = fullStoreRes.data.data?.products || [];
+          setProducts(initialProducts);
+          productsFromStoreApiLoaded = true;
+          setRatingSummary(fullStoreRes.data.data?.ratingSummary || null);
+        } catch (_error) {
+          const profileRes = await vendorsAPI.getPublicProfileBySlug(slug);
+          vendorData = profileRes.data.data;
+        }
+      } else if (id) {
+        const legacyRes = await vendorsAPI.getById(id);
+        vendorData = legacyRes.data.data;
+      }
+
+      if (!vendorData) {
+        toast.error('Vendor not found');
+        navigate('/vendors');
+        return;
+      }
+
+      const vendorId = vendorData.vendorId || vendorData._id;
+      setVendor(vendorData);
+      if (!productsFromStoreApiLoaded) {
+        const productsRes = await productsAPI.getPublicVendorProducts(vendorId, { limit: 24, sort: 'newest' });
+        setProducts(productsRes.data.data || []);
+      }
+    } catch (error: any) {
+      toast.error('Vendor not found');
+      navigate('/vendors');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sortedProducts = [...products].sort((a: any, b: any) => {
+    switch (sortBy) {
+      case 'price-low':
+        return a.price - b.price;
+      case 'price-high':
+        return b.price - a.price;
+      case 'popular':
+        return (b.totalSales || 0) - (a.totalSales || 0);
+      default:
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    }
+  });
+  const visibleProducts = sortedProducts.filter((product: any) =>
+    !search.trim() ? true : product.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+          <div className="animate-pulse">Loading vendor...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!vendor) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <Navbar />
+        <div className="max-w-7xl mx-auto px-4 py-20 text-center">
+          <p className="text-red-600">Vendor not found</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navbar />
+      
+      {/* Header Banner */}
+      <div className="h-64 md:h-80 bg-gradient-to-br from-nvm-green-primary to-nvm-green-600 relative overflow-hidden">
+        {vendor.coverImageUrl || vendor.coverImage?.url || vendor.banner?.url ? (
+          <img 
+            src={vendor.coverImageUrl || vendor.coverImage?.url || vendor.banner?.url} 
+            alt={vendor.storeName}
+            className="w-full h-full object-cover"
+          />
+        ) : null}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      </div>
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-32 relative z-10 pb-20">
+        {/* Vendor Profile Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-xl shadow-xl overflow-hidden mb-12"
+        >
+          <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8 items-start">
+            <div className="flex-shrink-0">
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-white shadow-lg overflow-hidden bg-gradient-to-br from-nvm-green-primary to-nvm-gold-primary flex items-center justify-center">
+                {vendor.profileImageUrl || vendor.profileImage?.url || vendor.logo?.url ? (
+                  <img src={vendor.profileImageUrl || vendor.profileImage?.url || vendor.logo?.url} alt={vendor.storeName} className="w-full h-full object-cover" />
+                ) : (
+                  <Store className="w-20 h-20 text-white" />
+                )}
+              </div>
+            </div>
+
+            <div className="flex-grow pt-2">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4 mb-4">
+                <div>
+                  <h1 className="text-3xl md:text-4xl font-display font-bold text-nvm-dark-900 mb-2">
+                    {vendor.storeName}
+                  </h1>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    {String(vendor.verificationStatus || '').toUpperCase() === 'VERIFIED' && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-700">Verified Vendor</span>
+                    )}
+                    {Boolean(vendor.topRatedBadge) && (
+                      <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-700">Top Rated</span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4 text-gray-600 mb-2">
+                    {(vendor.location || vendor.address) && (
+                      <span className="flex items-center">
+                        <MapPin className="w-4 h-4 mr-1" />
+                        {vendor.location?.city || vendor.address?.city}, {vendor.location?.state || vendor.address?.state}
+                      </span>
+                    )}
+                    {vendor.rating > 0 && (
+                      <span className="flex items-center text-nvm-gold-primary font-bold">
+                        <Star className="w-4 h-4 mr-1 fill-current" />
+                        {vendor.rating.toFixed(1)} ({vendor.totalReviews} reviews)
+                      </span>
+                    )}
+                  </div>
+                  {vendor.businessType && (
+                    <p className="text-nvm-green-600 font-medium">{vendor.businessType}</p>
+                  )}
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(window.location.href);
+                      toast.success('Link copied to clipboard!');
+                    }}
+                    className="px-4 py-2 border-2 border-gray-300 text-gray-700 rounded-lg font-medium hover:border-nvm-green-500 hover:bg-nvm-green-50 transition-colors flex items-center gap-2"
+                  >
+                    <Share2 className="w-4 h-4" /> Share
+                  </button>
+                  {isAuthenticated && user?.role !== 'vendor' && (
+                    <button
+                      onClick={() => navigate(`/chat?vendorId=${vendor.vendorId || vendor._id}&type=general`)}
+                      className="px-4 py-2 border-2 border-nvm-green-primary text-nvm-green-primary rounded-lg font-medium hover:bg-nvm-green-50 transition-colors flex items-center gap-2"
+                    >
+                      <MessageSquare className="w-4 h-4" /> Chat Vendor
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {(vendor.bio || vendor.description || vendor.about) && (
+                <div className="prose prose-green max-w-none mb-4">
+                  <p className="text-gray-700 leading-relaxed">{vendor.bio || vendor.description || vendor.about}</p>
+                </div>
+              )}
+
+              {/* Contact Info */}
+              <div className="flex flex-wrap gap-4 text-sm text-gray-600 border-t border-gray-200 pt-4 mt-4">
+                {vendor.email && (
+                  <a href={`mailto:${vendor.email}`} className="flex items-center gap-2 hover:text-nvm-green-600">
+                    <Mail className="w-4 h-4" />
+                    {vendor.email}
+                  </a>
+                )}
+                {vendor.phone && (
+                  <a href={`tel:${vendor.phone}`} className="flex items-center gap-2 hover:text-nvm-green-600">
+                    <Phone className="w-4 h-4" />
+                    {vendor.phone}
+                  </a>
+                )}
+                {(vendor.website || vendor.socialLinks?.website) && (
+                  <a href={vendor.website || vendor.socialLinks?.website} target="_blank" rel="noreferrer" className="flex items-center gap-2 hover:text-nvm-green-600">
+                    <Globe className="w-4 h-4" />
+                    Website
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Decorative Footer Strip */}
+          <div className="h-3 bg-gradient-to-r from-nvm-green-primary via-nvm-gold-primary to-nvm-green-600" />
+        </motion.div>
+
+        <VendorReviews vendorId={vendor.vendorId || vendor._id} />
+
+        {(vendor.storePolicies?.shippingPolicy || vendor.storePolicies?.returnsPolicy || vendor.storePolicies?.refundPolicy || vendor.storePolicies?.terms) && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+            <h3 className="text-xl font-bold text-nvm-dark-900 mb-4">Store Policies</h3>
+            {vendor.storePolicies?.shippingPolicy && <p className="text-sm text-gray-700 mb-2"><strong>Shipping:</strong> {vendor.storePolicies.shippingPolicy}</p>}
+            {vendor.storePolicies?.returnsPolicy && <p className="text-sm text-gray-700 mb-2"><strong>Returns:</strong> {vendor.storePolicies.returnsPolicy}</p>}
+            {vendor.storePolicies?.refundPolicy && <p className="text-sm text-gray-700 mb-2"><strong>Refunds:</strong> {vendor.storePolicies.refundPolicy}</p>}
+            {vendor.storePolicies?.terms && <p className="text-sm text-gray-700"><strong>Terms:</strong> {vendor.storePolicies.terms}</p>}
+          </div>
+        )}
+
+        {ratingSummary && (
+          <div className="bg-white rounded-xl shadow-sm p-4 mb-8 text-sm text-gray-700">
+            Rating Summary: {Number(ratingSummary.avgRating || 0).toFixed(1)} / 5 ({ratingSummary.count || 0} reviews)
+          </div>
+        )}
+
+        {/* Products Section */}
+        <div className="mb-8 flex items-center justify-between">
+          <h2 className="text-2xl font-bold text-nvm-dark-900">Store Products</h2>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search products"
+              className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-nvm-green-primary"
+            />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="bg-white border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-nvm-green-primary"
+            >
+              <option value="newest">Newest First</option>
+              <option value="popular">Most Popular</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Products Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {visibleProducts.length > 0 ? (
+            visibleProducts.map((product: any, index: number) => (
+              <ProductCard key={product._id} product={product} index={index} trackingSource="VENDOR_PAGE" />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-20 bg-white rounded-lg border-2 border-dashed border-gray-200">
+              <Store className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500">No products available from this vendor yet.</p>
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}

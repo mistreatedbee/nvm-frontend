@@ -1,0 +1,324 @@
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { Hero } from '../components/Hero';
+import { Navbar } from '../components/Navbar';
+import { CategoryNav } from '../components/CategoryNav';
+import { CategorySection } from '../components/CategorySection';
+import { HowItWorks } from '../components/HowItWorks';
+import { ReviewsSection } from '../components/ReviewsSection';
+import { TrustBadges } from '../components/TrustBadges';
+import { NewsletterSection } from '../components/NewsletterSection';
+import { VendorCard } from '../components/VendorCard';
+import { ProductCard } from '../components/ProductCard';
+import { RecentlyViewedSection } from '../components/RecentlyViewedSection';
+import { PatternOverlay } from '../components/PatternOverlay';
+import { productsAPI, recommendationsAPI, vendorsAPI } from '../lib/api';
+import { useAuthStore } from '../lib/store';
+import { ArrowRight, TrendingUp, Sparkles } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+export function MarketplaceHome() {
+  const { isAuthenticated } = useAuthStore();
+  const [activeCategory, setActiveCategory] = useState('all');
+  const [apiFeaturedProducts, setApiFeaturedProducts] = useState([]);
+  const [apiTrendingProducts, setApiTrendingProducts] = useState([]);
+  const [apiVendors, setApiVendors] = useState([]);
+  const [newArrivals, setNewArrivals] = useState([]);
+  const [recommendedProducts, setRecommendedProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch public data for guest/customer browsing.
+    const fetchData = async () => {
+      try {
+        const [featuredRes, trendingRes, newRes, vendorsRes] = await Promise.all([
+          productsAPI.getFeatured(),
+          productsAPI.getTrending({ range: '7d', limit: 8 }),
+          productsAPI.getNewArrivals({ limit: 8 }),
+          vendorsAPI.getAll({ limit: 4 })
+        ]);
+
+        setApiFeaturedProducts(featuredRes.data.data || []);
+        setApiTrendingProducts(trendingRes.data.data || []);
+        setNewArrivals(newRes.data.data || []);
+        setApiVendors(vendorsRes.data.data || []);
+        if (isAuthenticated) {
+          recommendationsAPI.get({ limit: 8 }).then((res) => setRecommendedProducts(res.data.data || [])).catch(() => {});
+        }
+      } catch (error) {
+        console.error('Failed to fetch homepage marketplace data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [isAuthenticated]);
+
+  const displayProducts = apiFeaturedProducts;
+  const trendingProducts = apiTrendingProducts;
+  const displayVendors = apiVendors;
+  const filteredProducts = activeCategory === 'all' 
+    ? displayProducts 
+    : displayProducts.filter((p: any) => {
+        const category = typeof p.category === 'string' ? p.category : p.category?.name || '';
+        return category.toLowerCase().includes(activeCategory);
+      });
+
+  return (
+    <div className="min-h-screen bg-nvm-green-bg">
+      <Navbar />
+      <Hero />
+
+      {/* Category Section - Expanded */}
+      <CategorySection />
+
+      {/* How It Works */}
+      <HowItWorks />
+
+      {/* Trust Badges */}
+      <TrustBadges />
+
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
+        {/* Featured Vendors Section - Enhanced */}
+        <section>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-nvm-green-primary/10 rounded-full mb-4">
+              <TrendingUp className="w-5 h-5 text-nvm-green-primary" />
+              <span className="text-nvm-green-primary font-semibold">Top Rated</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">
+              Featured <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">Vendors</span>
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+              Meet our top-rated vendors offering quality products and exceptional service
+            </p>
+          </motion.div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {displayVendors.map((vendor: any, index: number) => (
+              <VendorCard key={vendor._id || vendor.id} vendor={vendor} index={index} />
+            ))}
+          </div>
+
+          <div className="text-center">
+            <Link to="/vendors">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="inline-flex items-center gap-2 px-8 py-4 bg-white border-2 border-nvm-green-primary text-nvm-green-primary rounded-xl font-semibold hover:bg-nvm-green-primary hover:text-white shadow-lg transition-all"
+              >
+                View All Vendors
+                <ArrowRight className="w-5 h-5" />
+              </motion.button>
+            </Link>
+          </div>
+        </section>
+
+        {/* Featured Products Section - Enhanced */}
+        <section className="relative">
+          {/* Decorative Background Element */}
+          <div className="absolute -left-20 top-20 w-64 h-64 bg-nvm-gold-primary/10 rounded-full blur-3xl -z-10" />
+          <div className="absolute -right-20 bottom-20 w-64 h-64 bg-nvm-green-primary/10 rounded-full blur-3xl -z-10" />
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-nvm-gold-primary/10 rounded-full mb-4">
+              <Sparkles className="w-5 h-5 text-nvm-gold-primary" />
+              <span className="text-nvm-gold-primary font-semibold">Featured Picks</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">
+              Featured <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">Products</span>
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
+              Discover handpicked products from our best vendors
+            </p>
+            <CategoryNav activeCategory={activeCategory} onSelect={setActiveCategory} />
+          </motion.div>
+
+          <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredProducts.slice(0, 8).map((product: any, index: number) => (
+              <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+            ))}
+          </motion.div>
+
+          <div className="mt-12 text-center">
+            <Link to="/marketplace">
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="px-8 py-4 bg-gradient-to-r from-nvm-green-primary to-nvm-green-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-2xl transition-all inline-flex items-center gap-2"
+              >
+                Browse All Products
+                <ArrowRight className="w-5 h-5" />
+              </motion.button>
+            </Link>
+          </div>
+        </section>
+
+        <section>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-10"
+          >
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-nvm-green-primary/10 rounded-full mb-4">
+              <TrendingUp className="w-5 h-5 text-nvm-green-primary" />
+              <span className="text-nvm-green-primary font-semibold">Trending Now</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">
+              Trending <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">Products</span>
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Ranked by real user activity and purchases in the last 7 days.
+            </p>
+          </motion.div>
+
+          {loading ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {Array.from({ length: 4 }).map((_, idx) => (
+                <div key={idx} className="h-64 rounded-lg border bg-white animate-pulse" />
+              ))}
+            </div>
+          ) : trendingProducts.length === 0 ? (
+            <div className="bg-white border rounded-lg text-center py-10 text-gray-500">No trending products yet.</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {trendingProducts.slice(0, 8).map((product: any, index: number) => (
+                <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
+            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">New Arrivals</h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">Latest published products from active vendors.</p>
+          </motion.div>
+          {newArrivals.length === 0 ? (
+            <div className="bg-white border rounded-lg text-center py-10 text-gray-500">No new arrivals yet.</div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {newArrivals.slice(0, 8).map((product: any, index: number) => (
+                <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+              ))}
+            </div>
+          )}
+        </section>
+
+        {isAuthenticated && (
+          <section>
+            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
+              <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">Recommended For You</h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">Based on your recently viewed categories and brands.</p>
+            </motion.div>
+            {recommendedProducts.length === 0 ? (
+              <div className="bg-white border rounded-lg text-center py-10 text-gray-500">No recommendations yet.</div>
+            ) : (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {recommendedProducts.slice(0, 8).map((product: any, index: number) => (
+                  <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {isAuthenticated && (
+          <RecentlyViewedSection title="Recently Viewed" limit={8} />
+        )}
+
+      </main>
+
+      {/* Customer Reviews */}
+      <ReviewsSection />
+
+      {/* Newsletter Signup */}
+      <NewsletterSection />
+
+      <footer className="bg-nvm-green-primary text-white pt-16 pb-8 mt-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
+            <div className="col-span-1 md:col-span-2">
+              <div className="flex items-center gap-3 mb-4">
+                <img 
+                  src="/logo.jpeg" 
+                  alt="NVM" 
+                  className="h-16 w-auto object-contain brightness-0 invert opacity-90"
+                />
+              </div>
+              <p className="text-sm text-nvm-gold-light font-medium mb-2">Your Marketplace for Every Business</p>
+              <p className="text-green-100 max-w-sm">
+                Connecting vendors with customers across South Africa.
+                Authentic, trusted, and community-driven.
+              </p>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4 text-nvm-gold-light">Shop</h4>
+              <ul className="space-y-2 text-green-100">
+                <li>
+                  <a href="#" className="hover:text-white">
+                    All Products
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Featured Vendors
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    New Arrivals
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Gift Cards
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-bold mb-4 text-nvm-gold-light">Community</h4>
+              <ul className="space-y-2 text-green-100">
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Our Story
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Vendor Blog
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Events
+                  </a>
+                </li>
+                <li>
+                  <a href="#" className="hover:text-white">
+                    Contact Us
+                  </a>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-8 text-center text-green-200 text-sm">
+            © 2024 NVM Marketplace. All rights reserved.
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}
