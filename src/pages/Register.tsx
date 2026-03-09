@@ -48,8 +48,9 @@ export function Register() {
         navigate('/verify-email');
       }
     } catch (error: any) {
-      if (error?.code === 'ERR_NETWORK') {
-        toast.error('Cannot reach backend API. Check VITE_API_URL and backend status.');
+      const isConnectionError = error?.code === 'ERR_NETWORK' || error?.code === 'ERR_CONNECTION_CLOSED' || error?.code === 'ERR_HTTP2_SERVER_REFUSED_STREAM';
+      if (isConnectionError) {
+        toast.error('Server is unreachable. If using Render free tier, it may be starting up — please try again in 30–60 seconds.');
       } else {
         toast.error(error.response?.data?.message || 'Registration failed');
       }

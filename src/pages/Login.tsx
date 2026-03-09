@@ -60,7 +60,12 @@ export function Login() {
         navigate('/');
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Invalid credentials');
+      const isConnectionError = error?.code === 'ERR_NETWORK' || error?.code === 'ERR_CONNECTION_CLOSED' || error?.code === 'ERR_HTTP2_SERVER_REFUSED_STREAM';
+      if (isConnectionError) {
+        toast.error('Server is unreachable. If using Render free tier, it may be starting up — please try again in 30–60 seconds.');
+      } else {
+        toast.error(error.response?.data?.message || 'Invalid credentials');
+      }
     } finally {
       setIsLoading(false);
     }
