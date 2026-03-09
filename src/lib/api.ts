@@ -2,6 +2,17 @@ import axios from 'axios';
 
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
 
+// #region agent log
+function _dbgLog(location: string, message: string, data: Record<string, unknown>, hypothesisId: string) {
+  const payload = { sessionId: '7840a6', location, message, data, timestamp: Date.now(), hypothesisId };
+  fetch('http://127.0.0.1:7469/ingest/5d631cb0-b818-47aa-aa02-aaea8bc641b1', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '7840a6' },
+    body: JSON.stringify(payload)
+  }).catch(() => {});
+}
+// #endregion
+
 function getGuestCartSessionId() {
   const key = 'nvm_cart_session_id';
   const existing = localStorage.getItem(key);
@@ -10,6 +21,10 @@ function getGuestCartSessionId() {
   localStorage.setItem(key, value);
   return value;
 }
+
+// #region agent log
+_dbgLog('api.ts:init', 'API module loaded', { apiUrl: API_URL, viteEnv: import.meta.env.VITE_API_URL || '(not set)' }, 'H5');
+// #endregion
 
 // Create axios instance
 const api = axios.create({
@@ -20,8 +35,10 @@ const api = axios.create({
 });
 
 // Request interceptor to add auth token
+let _reqCount = 0;
 api.interceptors.request.use(
   (config) => {
+    _reqCount += 1;
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -35,8 +52,26 @@ api.interceptors.request.use(
 
 // Response interceptor to handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    _reqCount = Math.max(0, _reqCount - 1);
+    return response;
+  },
   (error) => {
+    _reqCount = Math.max(0, _reqCount - 1);
+    // #region agent log
+    const fullUrl = error.config?.baseURL && error.config?.url ? `${error.config.baseURL}${error.config.url}` : 'unknown';
+    _dbgLog('api.ts:response', 'API request failed', {
+      fullUrl,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      code: error.code,
+      message: error.message,
+      apiBaseUrl: API_URL,
+      inFlightCount: _reqCount,
+      hadToken: Boolean(localStorage.getItem('token'))
+    }, error.response?.status === 401 ? 'H3' : error.code === 'ERR_CONNECTION_CLOSED' || error.code === 'ERR_HTTP2_SERVER_REFUSED_STREAM' ? 'H1' : 'H4');
+    // #endregion
     const hadToken = Boolean(localStorage.getItem('token'));
     if (error.response?.status === 401 && hadToken) {
       // Unauthorized - clear token and redirect to login

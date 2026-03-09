@@ -31,6 +31,9 @@ export function MarketplaceHome() {
     // Fetch public data for guest/customer browsing.
     const fetchData = async () => {
       try {
+        // #region agent log
+        fetch('http://127.0.0.1:7469/ingest/5d631cb0-b818-47aa-aa02-aaea8bc641b1',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7840a6'},body:JSON.stringify({sessionId:'7840a6',location:'MarketplaceHome.tsx:fetchData',message:'MarketplaceHome firing 4+ parallel requests',data:{endpoints:['featured','trending','new','vendors','recommendations?']},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+        // #endregion
         const [featuredRes, trendingRes, newRes, vendorsRes] = await Promise.all([
           productsAPI.getFeatured(),
           productsAPI.getTrending({ range: '7d', limit: 8 }),

@@ -17,6 +17,9 @@ export function Hero() {
 
   const fetchStats = async () => {
     try {
+      // #region agent log
+      fetch('http://127.0.0.1:7469/ingest/5d631cb0-b818-47aa-aa02-aaea8bc641b1',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7840a6'},body:JSON.stringify({sessionId:'7840a6',location:'Hero.tsx:fetchStats',message:'Hero firing 3 parallel requests',data:{endpoints:['vendors','products','products?status=PUBLISHED']},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
+      // #endregion
       const [vendorsRes, productsRes, publishedRes] = await Promise.all([
         vendorsAPI.getAll({ limit: 1 }),
         productsAPI.getAll({ limit: 1 }),
