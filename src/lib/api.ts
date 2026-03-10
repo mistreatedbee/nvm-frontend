@@ -1,6 +1,12 @@
 import axios from 'axios';
 
-const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+// Backend mounts routes at /api (e.g. /api/auth/register). Ensure base URL ends with /api.
+function normalizeApiBaseUrl(url: string): string {
+  const base = (url || '').replace(/\/+$/, '');
+  if (!base) return 'http://localhost:5000/api';
+  return base.endsWith('/api') ? base : `${base}/api`;
+}
+const API_URL = normalizeApiBaseUrl(import.meta.env.VITE_API_URL || 'http://localhost:5000/api');
 
 // #region agent log
 function _dbgLog(location: string, message: string, data: Record<string, unknown>, hypothesisId: string) {

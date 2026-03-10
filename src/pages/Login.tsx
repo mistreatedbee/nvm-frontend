@@ -9,6 +9,7 @@ import { motion } from 'framer-motion';
 interface LoginForm {
   email: string;
   password: string;
+  twoFactorCode?: string;
 }
 
 export function Login() {
@@ -28,7 +29,20 @@ export function Login() {
     setIsLoading(true);
     try {
       const response = await authAPI.login(data);
-      const { user, token, message } = response.data;
+      const { user, token, message, requiresTwoFactor } = response.data;
+
+      // Backend may return requiresTwoFactor without token/user — do not call setAuth in that case
+      if (requiresTwoFactor && !token) {
+        toast.error('Enter your 2FA code above and click Sign In again.');
+        setIsLoading(false);
+        return;
+      }
+
+      if (!token || !user) {
+        toast.error('Invalid login response. Please try again.');
+        setIsLoading(false);
+        return;
+      }
 
       setAuth(user, token);
       await Promise.all([
@@ -145,6 +159,22 @@ export function Login() {
                   Forgot password?
                 </Link>
               </div>
+            </div>
+
+            <div>
+              <label htmlFor="twoFactorCode" className="block text-sm font-medium text-gray-700 mb-2">
+                2FA code <span className="text-gray-400 font-normal">(if enabled)</span>
+              </label>
+              <input
+                id="twoFactorCode"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                placeholder="000000"
+                maxLength={6}
+                {...register('twoFactorCode')}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-primary"
+              />
             </div>
 
             <button
