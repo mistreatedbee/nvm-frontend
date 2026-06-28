@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { authAPI } from '../lib/api';
+import { authAPI, getErrorMessage } from '../lib/api';
 import { useAuthStore } from '../lib/store';
 import { motion } from 'framer-motion';
 
@@ -48,14 +48,7 @@ export function Register() {
         navigate('/verify-email');
       }
     } catch (error: any) {
-      const isConnectionError = error?.code === 'ERR_NETWORK' || error?.code === 'ERR_CONNECTION_CLOSED' || error?.code === 'ERR_HTTP2_SERVER_REFUSED_STREAM';
-      if (isConnectionError) {
-        toast.error('Server is unreachable. If using Render free tier, it may be starting up — please try again in 30–60 seconds.');
-      } else {
-        const data = error.response?.data;
-        const firstError = data?.errors?.[0]?.msg;
-        toast.error(firstError || data?.message || 'Registration failed');
-      }
+      toast.error(getErrorMessage(error, 'Registration failed'));
     } finally {
       setIsLoading(false);
     }

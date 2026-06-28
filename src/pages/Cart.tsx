@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { Navbar } from '../components/Navbar';
 import { useCartStore } from '../lib/store';
-import { formatRands } from '../lib/currency';
+import { formatRands, TAX_RATE } from '../lib/currency';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight, Sparkles, CreditCard } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -32,7 +32,7 @@ export function Cart() {
 
   const subtotal = getTotal();
   const shipping = items.length > 0 ? 50 : 0;
-  const tax = subtotal * 0.15;
+  const tax = subtotal * TAX_RATE;
   const total = subtotal + shipping + tax;
 
   const adjustQuantity = async (productId: string, currentQty: number, adjustment: number) => {
@@ -196,7 +196,7 @@ export function Cart() {
                     <span>{formatRands(shipping)}</span>
                   </div>
                   <div className="flex justify-between text-gray-600 font-medium">
-                    <span>VAT (15%)</span>
+                    <span>VAT ({TAX_RATE * 100}%)</span>
                     <span>{formatRands(tax)}</span>
                   </div>
                   <div className="pt-6 border-t border-gray-200">

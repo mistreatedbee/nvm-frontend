@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ArrowRight, ShoppingBag, Store, Sparkles } from 'lucide-react';
+import { ArrowRight, ShoppingBag, Store, Sparkles, ShoppingBasket, Shirt, Gem, Coffee, Palette } from 'lucide-react';
 import { vendorsAPI, productsAPI } from '../lib/api';
+import { PatternOverlay } from './PatternOverlay';
 
 export function Hero() {
   const [stats, setStats] = useState({
@@ -54,6 +55,19 @@ export function Hero() {
     <div className="relative bg-gradient-to-br from-white via-nvm-green-bg to-nvm-gold-bg overflow-hidden">
       {/* Decorative Background Elements */}
       <div className="absolute inset-0 overflow-hidden">
+        {/* Subtle tiled textile pattern hinting at handcrafted goods */}
+        <PatternOverlay pattern="diamonds" color="#2D6A4F" opacity={0.05} />
+        <PatternOverlay pattern="ankara" color="#D4AF37" opacity={0.04} />
+
+        {/* Faint category icons evoking marketplace variety (desktop only to keep mobile text uncluttered) */}
+        <div className="absolute inset-0 hidden md:block text-nvm-green-dark/[0.07]">
+          <ShoppingBasket className="absolute top-12 left-[6%] w-20 h-20 -rotate-12" />
+          <Shirt className="absolute top-1/3 right-[10%] w-16 h-16 rotate-6 text-nvm-gold-dark/[0.07]" />
+          <Gem className="absolute bottom-28 left-[22%] w-14 h-14 rotate-3" />
+          <Coffee className="absolute bottom-12 right-[26%] w-16 h-16 -rotate-6 text-nvm-gold-dark/[0.07]" />
+          <Palette className="absolute top-20 right-[38%] w-12 h-12 rotate-12" />
+        </div>
+
         <motion.div
           className="absolute -top-40 -right-40 w-96 h-96 bg-nvm-green-primary/10 rounded-full blur-3xl"
           animate={{

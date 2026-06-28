@@ -2,10 +2,11 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShoppingBag, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useAuthStore, useCartStore, useWishlistStore } from '../lib/store';
+import { useAuthStore, useCartStore, useWishlistStore, useLoginPromptStore } from '../lib/store';
 import toast from 'react-hot-toast';
 import { DEFAULT_IMAGE_DATA_URI } from '../lib/images';
 import { trackingAPI } from '../lib/api';
+import { handleApiError } from '../lib/errorHandling';
 import { getTrackingSessionId } from '../utils/tracking';
 
 interface ProductCardProps {
@@ -39,7 +40,12 @@ export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: Pr
     e.preventDefault();
     e.stopPropagation();
     if (isAdding) return;
-    
+
+    if (!isAuthenticated) {
+      useLoginPromptStore.getState().open();
+      return;
+    }
+
     try {
       setIsAdding(true);
       await addItem({
@@ -55,7 +61,7 @@ export function ProductCard({ product, index = 0, trackingSource = 'OTHER' }: Pr
       });
       toast.success('Added to cart!');
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to add to cart');
+      handleApiError(error, 'Failed to add to cart');
       return;
     } finally {
       setIsAdding(false);

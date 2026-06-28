@@ -41,6 +41,7 @@ import { ChatInbox } from './pages/ChatInbox';
 import { AdminSupportChats } from './pages/AdminSupportChats';
 import { Notifications } from './pages/Notifications';
 import { ChatFloatingButtons } from './components/chat/ChatFloatingButtons';
+import { LoginRequiredModal } from './components/LoginRequiredModal';
 import { CustomerInvoices } from './pages/CustomerInvoices';
 import { VendorInvoices } from './pages/VendorInvoices';
 import { VendorTransactions } from './pages/VendorTransactions';
@@ -217,6 +218,7 @@ function App() {
         }}
       />
       <ChatFloatingButtons />
+      <LoginRequiredModal />
     </Router>
   );
 }

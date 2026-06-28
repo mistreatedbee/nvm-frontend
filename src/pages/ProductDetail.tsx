@@ -6,8 +6,9 @@ import { Navbar } from '../components/Navbar';
 import { ProductReviews } from '../components/ProductReviews';
 import { RecentlyViewedSection } from '../components/RecentlyViewedSection';
 import { productsAPI, recentlyViewedAPI, trackingAPI } from '../lib/api';
+import { handleApiError } from '../lib/errorHandling';
 import { ProductCard } from '../components/ProductCard';
-import { useCartStore, useWishlistStore, useAuthStore } from '../lib/store';
+import { useCartStore, useWishlistStore, useAuthStore, useLoginPromptStore } from '../lib/store';
 import { formatRands } from '../lib/currency';
 import toast from 'react-hot-toast';
 import { getTrackingSessionId } from '../utils/tracking';
@@ -62,6 +63,11 @@ export function ProductDetail() {
     if (!product) return;
     if (isAddingToCart) return;
 
+    if (!isAuthenticated) {
+      useLoginPromptStore.getState().open();
+      return;
+    }
+
     try {
       setIsAddingToCart(true);
       await addItem({
@@ -77,7 +83,7 @@ export function ProductDetail() {
       });
       toast.success('Added to cart!');
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Failed to add item to cart');
+      handleApiError(error, 'Failed to add item to cart');
       return;
     } finally {
       setIsAddingToCart(false);

@@ -97,6 +97,35 @@ api.interceptors.response.use(
 
 export default api;
 
+// Returns true when an API error indicates the user needs to log in -
+// covers plain 401s and the backend's generic Mongo duplicate-key message
+// for the userId field (a symptom of unauthenticated cart/checkout actions).
+export function isAuthRequiredError(error: any): boolean {
+  if (error?.response?.status === 401) return true;
+  const message = String(error?.response?.data?.message || '');
+  return /userid already exists/i.test(message);
+}
+
+const CONNECTION_ERROR_CODES = ['ERR_NETWORK', 'ERR_CONNECTION_CLOSED', 'ERR_HTTP2_SERVER_REFUSED_STREAM'];
+
+// Normalizes any axios/backend error into a single user-facing message:
+// network failures, express-validator's `errors[].msg` array, the backend's
+// `message` field (a string, or an array when it comes from a Mongoose
+// ValidationError), then the caller's fallback, in that order.
+export function getErrorMessage(error: any, fallback = 'Something went wrong. Please try again.'): string {
+  if (CONNECTION_ERROR_CODES.includes(error?.code)) {
+    return 'Server is unreachable. If using Render free tier, it may be starting up — please try again in 30–60 seconds.';
+  }
+  if (!error?.response) {
+    return 'We couldn\'t reach the server. Please check your connection and try again.';
+  }
+  const data = error.response.data;
+  const firstValidationError = data?.errors?.[0]?.msg;
+  if (firstValidationError) return firstValidationError;
+  if (Array.isArray(data?.message)) return data.message.filter(Boolean).join(' ') || fallback;
+  return data?.message || fallback;
+}
+
 // API functions
 
 // Auth

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
-import { authAPI } from '../lib/api';
+import { authAPI, getErrorMessage } from '../lib/api';
 import { useAuthStore, useCartStore, useWishlistStore } from '../lib/store';
 import { motion } from 'framer-motion';
 
@@ -74,12 +74,7 @@ export function Login() {
         navigate('/');
       }
     } catch (error: any) {
-      const isConnectionError = error?.code === 'ERR_NETWORK' || error?.code === 'ERR_CONNECTION_CLOSED' || error?.code === 'ERR_HTTP2_SERVER_REFUSED_STREAM';
-      if (isConnectionError) {
-        toast.error('Server is unreachable. If using Render free tier, it may be starting up — please try again in 30–60 seconds.');
-      } else {
-        toast.error(error.response?.data?.message || 'Invalid credentials');
-      }
+      toast.error(getErrorMessage(error, 'Invalid credentials'));
     } finally {
       setIsLoading(false);
     }

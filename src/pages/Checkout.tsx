@@ -3,9 +3,9 @@ import { motion } from 'framer-motion';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { Navbar } from '../components/Navbar';
-import { useCartStore, useAuthStore } from '../lib/store';
-import { addressesAPI, cartAPI, checkoutAPI, helpAPI, logisticsAPI, ordersAPI } from '../lib/api';
-import { formatRands } from '../lib/currency';
+import { useCartStore, useAuthStore, useLoginPromptStore } from '../lib/store';
+import { addressesAPI, cartAPI, checkoutAPI, helpAPI, logisticsAPI, ordersAPI, isAuthRequiredError, getErrorMessage } from '../lib/api';
+import { formatRands, TAX_RATE } from '../lib/currency';
 import { FileText, MapPin, CheckCircle, Minus, Plus } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -106,7 +106,7 @@ export function Checkout() {
     deliveryMethod === 'PICKUP'
       ? 0
       : previewTotals?.deliveryFee ?? quotedShipping ?? (cartItems.length ? 50 : 0);
-  const tax = previewTotals?.tax ?? subtotal * 0.15;
+  const tax = previewTotals?.tax ?? subtotal * TAX_RATE;
   const totalBeforeDiscount = subtotal + shipping + tax;
   const totalDiscount = Math.min(
     totalBeforeDiscount,
@@ -194,8 +194,7 @@ export function Checkout() {
         console.info('[checkout] submit start', { idempotencyKey: checkoutIdempotencyKeyRef.current });
       }
       if (!isAuthenticated) {
-        toast.error('Please log in to place your order');
-        navigate('/login');
+        useLoginPromptStore.getState().open();
         return;
       }
       const freshCartRes = await cartAPI.get();
@@ -279,7 +278,11 @@ export function Checkout() {
       checkoutIdempotencyKeyRef.current = '';
       toast.success('Order placed. Invoice generated.');
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Failed to place order';
+      if (isAuthRequiredError(error)) {
+        useLoginPromptStore.getState().open();
+        return;
+      }
+      const message = getErrorMessage(error, 'Failed to place order');
       setCheckoutError(message);
       toast.error(message);
       try {
@@ -696,7 +699,7 @@ export function Checkout() {
                   <span className="font-semibold">{formatRands(shipping)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">
-                  <span>VAT (15%)</span>
+                  <span>VAT ({TAX_RATE * 100}%)</span>
                   <span className="font-semibold">{formatRands(tax)}</span>
                 </div>
                 <div className="flex justify-between text-gray-600">

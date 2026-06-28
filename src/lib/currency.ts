@@ -22,3 +22,8 @@ export const formatRands = (amount: number): string => {
 
 export const CURRENCY_SYMBOL = 'R';
 export const CURRENCY_CODE = 'ZAR';
+
+// VAT rate applied to order subtotals. Must match TAX_RATE in
+// nvm-marketplace-backend/controllers/orderController.js, which is the
+// authoritative calculation used when orders are actually created.
+export const TAX_RATE = 0.10;
