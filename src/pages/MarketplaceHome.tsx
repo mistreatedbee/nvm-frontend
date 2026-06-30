@@ -4,52 +4,43 @@ import { Hero } from '../components/Hero';
 import { Navbar } from '../components/Navbar';
 import { CategoryNav } from '../components/CategoryNav';
 import { CategorySection } from '../components/CategorySection';
-import { HowItWorks } from '../components/HowItWorks';
-import { ReviewsSection } from '../components/ReviewsSection';
-import { TrustBadges } from '../components/TrustBadges';
 import { NewsletterSection } from '../components/NewsletterSection';
-import { VendorCard } from '../components/VendorCard';
 import { ProductCard } from '../components/ProductCard';
-import { RecentlyViewedSection } from '../components/RecentlyViewedSection';
-import { PatternOverlay } from '../components/PatternOverlay';
-import { productsAPI, recommendationsAPI, vendorsAPI } from '../lib/api';
+import { productsAPI, recommendationsAPI } from '../lib/api';
 import { useAuthStore } from '../lib/store';
-import { ArrowRight, TrendingUp, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, ShoppingBag, Flame, Star, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function MarketplaceHome() {
   const { isAuthenticated } = useAuthStore();
   const [activeCategory, setActiveCategory] = useState('all');
+  const [allProducts, setAllProducts] = useState([]);
   const [apiFeaturedProducts, setApiFeaturedProducts] = useState([]);
   const [apiTrendingProducts, setApiTrendingProducts] = useState([]);
-  const [apiVendors, setApiVendors] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
   const [recommendedProducts, setRecommendedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch public data for guest/customer browsing.
     const fetchData = async () => {
       try {
-        // #region agent log
-        fetch('http://127.0.0.1:7469/ingest/5d631cb0-b818-47aa-aa02-aaea8bc641b1',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7840a6'},body:JSON.stringify({sessionId:'7840a6',location:'MarketplaceHome.tsx:fetchData',message:'MarketplaceHome firing 4+ parallel requests',data:{endpoints:['featured','trending','new','vendors','recommendations?']},timestamp:Date.now(),hypothesisId:'H2'})}).catch(()=>{});
-        // #endregion
-        const [featuredRes, trendingRes, newRes, vendorsRes] = await Promise.all([
+        const [allRes, featuredRes, trendingRes, newRes] = await Promise.all([
+          productsAPI.getAll({ status: 'PUBLISHED', limit: 12 }),
           productsAPI.getFeatured(),
           productsAPI.getTrending({ range: '7d', limit: 8 }),
           productsAPI.getNewArrivals({ limit: 8 }),
-          vendorsAPI.getAll({ limit: 4 })
         ]);
 
+        setAllProducts(allRes.data.data || []);
         setApiFeaturedProducts(featuredRes.data.data || []);
         setApiTrendingProducts(trendingRes.data.data || []);
         setNewArrivals(newRes.data.data || []);
-        setApiVendors(vendorsRes.data.data || []);
+
         if (isAuthenticated) {
           recommendationsAPI.get({ limit: 8 }).then((res) => setRecommendedProducts(res.data.data || [])).catch(() => {});
         }
       } catch (error) {
-        console.error('Failed to fetch homepage marketplace data:', error);
+        console.error('Failed to fetch homepage data:', error);
       } finally {
         setLoading(false);
       }
@@ -57,159 +48,222 @@ export function MarketplaceHome() {
     fetchData();
   }, [isAuthenticated]);
 
-  const displayProducts = apiFeaturedProducts;
-  const trendingProducts = apiTrendingProducts;
-  const displayVendors = apiVendors;
-  const filteredProducts = activeCategory === 'all' 
-    ? displayProducts 
-    : displayProducts.filter((p: any) => {
-        const category = typeof p.category === 'string' ? p.category : p.category?.name || '';
-        return category.toLowerCase().includes(activeCategory);
+  const filteredFeatured = activeCategory === 'all'
+    ? apiFeaturedProducts
+    : apiFeaturedProducts.filter((p: any) => {
+        const cat = typeof p.category === 'string' ? p.category : p.category?.name || '';
+        return cat.toLowerCase().includes(activeCategory);
       });
 
+  const SkeletonGrid = ({ count = 8 }: { count?: number }) => (
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {Array.from({ length: count }).map((_, idx) => (
+        <div key={idx} className="h-64 bg-white rounded-xl border animate-pulse" />
+      ))}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-nvm-green-bg">
+    <div className="min-h-screen bg-white">
       <Navbar />
       <Hero />
 
-      {/* Category Section - Expanded */}
-      <CategorySection />
+      {/* Category Navigation */}
+      <section className="bg-white">
+        <CategorySection />
+      </section>
 
-      {/* How It Works */}
-      <HowItWorks />
-
-      {/* Trust Badges */}
-      <TrustBadges />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-20">
-        {/* Featured Vendors Section - Enhanced */}
-        <section>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-nvm-green-primary/10 rounded-full mb-4">
-              <TrendingUp className="w-5 h-5 text-nvm-green-primary" />
-              <span className="text-nvm-green-primary font-semibold">Top Rated</span>
+      {/* ─── ALL PRODUCTS ─────────────────────────────────────── */}
+      <section className="py-16 bg-nvm-green-bg">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-nvm-green-primary/10 rounded-full text-sm font-semibold text-nvm-green-primary mb-3">
+                <ShoppingBag className="w-4 h-4" />
+                Shop Now
+              </span>
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-nvm-dark-900">
+                Browse Our{' '}
+                <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">
+                  Collection
+                </span>
+              </h2>
+              <p className="text-gray-500 mt-2 max-w-xl">
+                Fresh products from trusted vendors across South Africa
+              </p>
             </div>
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">
-              Featured <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">Vendors</span>
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              Meet our top-rated vendors offering quality products and exceptional service
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-            {displayVendors.map((vendor: any, index: number) => (
-              <VendorCard key={vendor._id || vendor.id} vendor={vendor} index={index} />
-            ))}
-          </div>
-
-          <div className="text-center">
-            <Link to="/vendors">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="inline-flex items-center gap-2 px-8 py-4 bg-white border-2 border-nvm-green-primary text-nvm-green-primary rounded-xl font-semibold hover:bg-nvm-green-primary hover:text-white shadow-lg transition-all"
-              >
-                View All Vendors
-                <ArrowRight className="w-5 h-5" />
-              </motion.button>
+            <Link
+              to="/marketplace"
+              className="hidden md:inline-flex items-center gap-2 text-nvm-green-primary font-semibold text-sm hover:gap-3 transition-all duration-200"
+            >
+              View All Products <ArrowRight className="w-4 h-4" />
             </Link>
           </div>
-        </section>
 
-        {/* Featured Products Section - Enhanced */}
-        <section className="relative">
-          {/* Decorative Background Element */}
-          <div className="absolute -left-20 top-20 w-64 h-64 bg-nvm-gold-primary/10 rounded-full blur-3xl -z-10" />
-          <div className="absolute -right-20 bottom-20 w-64 h-64 bg-nvm-green-primary/10 rounded-full blur-3xl -z-10" />
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-12"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-nvm-gold-primary/10 rounded-full mb-4">
-              <Sparkles className="w-5 h-5 text-nvm-gold-primary" />
-              <span className="text-nvm-gold-primary font-semibold">Featured Picks</span>
+          {loading ? (
+            <SkeletonGrid count={8} />
+          ) : allProducts.length === 0 ? (
+            <div className="bg-white border rounded-xl text-center py-16 text-gray-500">
+              No products yet — check back soon.
             </div>
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">
-              Featured <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">Products</span>
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              Discover handpicked products from our best vendors
-            </p>
+          ) : (
+            <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {allProducts.slice(0, 12).map((product: any, index: number) => (
+                <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+              ))}
+            </motion.div>
+          )}
+
+          <div className="mt-10 text-center md:hidden">
+            <Link
+              to="/marketplace"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-nvm-green-primary text-white rounded-xl font-semibold text-sm shadow-md"
+            >
+              Browse All Products <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ─── FEATURED PRODUCTS ───────────────────────────────── */}
+      <section className="py-16 bg-white relative overflow-hidden">
+        <div className="absolute -left-20 top-20 w-64 h-64 bg-nvm-gold-primary/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -right-20 bottom-20 w-64 h-64 bg-nvm-green-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between mb-6">
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-nvm-gold-primary/10 rounded-full text-sm font-semibold text-nvm-gold-dark mb-3">
+                <Sparkles className="w-4 h-4" />
+                Featured Picks
+              </span>
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-nvm-dark-900">
+                Featured{' '}
+                <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">
+                  Products
+                </span>
+              </h2>
+              <p className="text-gray-500 mt-2 max-w-xl">
+                Handpicked products from our best vendors
+              </p>
+            </div>
+            <Link
+              to="/marketplace"
+              className="hidden md:inline-flex items-center gap-2 text-nvm-green-primary font-semibold text-sm hover:gap-3 transition-all duration-200"
+            >
+              View All <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          <div className="mb-8">
             <CategoryNav activeCategory={activeCategory} onSelect={setActiveCategory} />
-          </motion.div>
+          </div>
 
-          <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredProducts.slice(0, 8).map((product: any, index: number) => (
-              <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
-            ))}
-          </motion.div>
+          {loading ? (
+            <SkeletonGrid count={8} />
+          ) : filteredFeatured.length === 0 ? (
+            <div className="bg-gray-50 border rounded-xl text-center py-16 text-gray-500">
+              No featured products in this category yet.
+            </div>
+          ) : (
+            <motion.div layout className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {filteredFeatured.slice(0, 8).map((product: any, index: number) => (
+                <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+              ))}
+            </motion.div>
+          )}
 
-          <div className="mt-12 text-center">
+          <div className="mt-10 text-center">
             <Link to="/marketplace">
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="px-8 py-4 bg-gradient-to-r from-nvm-green-primary to-nvm-green-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-2xl transition-all inline-flex items-center gap-2"
+                className="px-8 py-4 bg-gradient-to-r from-nvm-green-primary to-nvm-green-dark text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all inline-flex items-center gap-2"
               >
                 Browse All Products
                 <ArrowRight className="w-5 h-5" />
               </motion.button>
             </Link>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="text-center mb-10"
-          >
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-nvm-green-primary/10 rounded-full mb-4">
-              <TrendingUp className="w-5 h-5 text-nvm-green-primary" />
-              <span className="text-nvm-green-primary font-semibold">Trending Now</span>
+      {/* ─── SPECIAL OFFERS (Trending) ───────────────────────── */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-nvm-orange-primary/10 rounded-full text-sm font-semibold text-nvm-orange-primary mb-3">
+                <Flame className="w-4 h-4" />
+                Hot This Week
+              </span>
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-nvm-dark-900">
+                Hot Deals &{' '}
+                <span className="bg-gradient-to-r from-nvm-orange-primary to-nvm-gold-primary bg-clip-text text-transparent">
+                  Special Offers
+                </span>
+              </h2>
+              <p className="text-gray-500 mt-2 max-w-xl">
+                Popular products with high buyer activity this week
+              </p>
             </div>
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">
-              Trending <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">Products</span>
-            </h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Ranked by real user activity and purchases in the last 7 days.
-            </p>
-          </motion.div>
+            <Link
+              to="/marketplace?sort=best_selling"
+              className="hidden md:inline-flex items-center gap-2 text-nvm-green-primary font-semibold text-sm hover:gap-3 transition-all duration-200"
+            >
+              View All <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
 
           {loading ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {Array.from({ length: 4 }).map((_, idx) => (
-                <div key={idx} className="h-64 rounded-lg border bg-white animate-pulse" />
-              ))}
+            <SkeletonGrid count={8} />
+          ) : apiTrendingProducts.length === 0 ? (
+            <div className="bg-white border rounded-xl text-center py-16 text-gray-500">
+              No trending products yet.
             </div>
-          ) : trendingProducts.length === 0 ? (
-            <div className="bg-white border rounded-lg text-center py-10 text-gray-500">No trending products yet.</div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {trendingProducts.slice(0, 8).map((product: any, index: number) => (
+              {apiTrendingProducts.slice(0, 8).map((product: any, index: number) => (
                 <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
               ))}
             </div>
           )}
-        </section>
+        </div>
+      </section>
 
-        <section>
-          <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
-            <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">New Arrivals</h2>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">Latest published products from active vendors.</p>
-          </motion.div>
-          {newArrivals.length === 0 ? (
-            <div className="bg-white border rounded-lg text-center py-10 text-gray-500">No new arrivals yet.</div>
+      {/* ─── NEW ARRIVALS ────────────────────────────────────── */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-end justify-between mb-10">
+            <div>
+              <span className="inline-flex items-center gap-2 px-3 py-1 bg-nvm-green-primary/10 rounded-full text-sm font-semibold text-nvm-green-primary mb-3">
+                <Star className="w-4 h-4" />
+                Just Landed
+              </span>
+              <h2 className="text-3xl md:text-4xl font-display font-bold text-nvm-dark-900">
+                New{' '}
+                <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">
+                  Arrivals
+                </span>
+              </h2>
+              <p className="text-gray-500 mt-2 max-w-xl">
+                Latest products from active vendors, published this week
+              </p>
+            </div>
+            <Link
+              to="/marketplace?sort=newest"
+              className="hidden md:inline-flex items-center gap-2 text-nvm-green-primary font-semibold text-sm hover:gap-3 transition-all duration-200"
+            >
+              View All <ArrowRight className="w-4 h-4" />
+            </Link>
+          </div>
+
+          {loading ? (
+            <SkeletonGrid count={8} />
+          ) : newArrivals.length === 0 ? (
+            <div className="bg-gray-50 border rounded-xl text-center py-16 text-gray-500">
+              No new arrivals yet.
+            </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {newArrivals.slice(0, 8).map((product: any, index: number) => (
@@ -217,46 +271,51 @@ export function MarketplaceHome() {
               ))}
             </div>
           )}
-        </section>
+        </div>
+      </section>
 
-        {isAuthenticated && (
-          <section>
-            <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-10">
-              <h2 className="text-4xl md:text-5xl font-display font-bold text-nvm-dark-900 mb-4">Recommended For You</h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">Based on your recently viewed categories and brands.</p>
-            </motion.div>
-            {recommendedProducts.length === 0 ? (
-              <div className="bg-white border rounded-lg text-center py-10 text-gray-500">No recommendations yet.</div>
-            ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                {recommendedProducts.slice(0, 8).map((product: any, index: number) => (
-                  <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
-                ))}
+      {/* ─── RECOMMENDED FOR YOU (auth-gated) ───────────────── */}
+      {isAuthenticated && recommendedProducts.length > 0 && (
+        <section className="py-16 bg-nvm-gold-bg">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-end justify-between mb-10">
+              <div>
+                <span className="inline-flex items-center gap-2 px-3 py-1 bg-nvm-gold-primary/10 rounded-full text-sm font-semibold text-nvm-gold-dark mb-3">
+                  <Heart className="w-4 h-4" />
+                  Picked For You
+                </span>
+                <h2 className="text-3xl md:text-4xl font-display font-bold text-nvm-dark-900">
+                  Recommended{' '}
+                  <span className="bg-gradient-to-r from-nvm-green-primary to-nvm-gold-primary bg-clip-text text-transparent">
+                    For You
+                  </span>
+                </h2>
+                <p className="text-gray-500 mt-2 max-w-xl">
+                  Based on your browsing activity and interests
+                </p>
               </div>
-            )}
-          </section>
-        )}
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+              {recommendedProducts.slice(0, 8).map((product: any, index: number) => (
+                <ProductCard key={product._id || product.id} product={product} index={index} trackingSource="HOMEPAGE" />
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
-        {isAuthenticated && (
-          <RecentlyViewedSection title="Recently Viewed" limit={8} />
-        )}
-
-      </main>
-
-      {/* Customer Reviews */}
-      <ReviewsSection />
-
-      {/* Newsletter Signup */}
+      {/* Newsletter */}
       <NewsletterSection />
 
-      <footer className="bg-nvm-green-primary text-white pt-16 pb-8 mt-20">
+      {/* Footer */}
+      <footer className="bg-nvm-green-primary text-white pt-16 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-12 mb-12">
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <img 
-                  src="/logo.jpeg" 
-                  alt="NVM" 
+                <img
+                  src="/logo.jpeg"
+                  alt="NVM"
                   className="h-16 w-auto object-contain brightness-0 invert opacity-90"
                 />
               </div>
@@ -269,56 +328,24 @@ export function MarketplaceHome() {
             <div>
               <h4 className="font-bold mb-4 text-nvm-gold-light">Shop</h4>
               <ul className="space-y-2 text-green-100">
-                <li>
-                  <a href="#" className="hover:text-white">
-                    All Products
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Featured Vendors
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    New Arrivals
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Gift Cards
-                  </a>
-                </li>
+                <li><Link to="/marketplace" className="hover:text-white transition-colors">All Products</Link></li>
+                <li><Link to="/marketplace?sort=best_selling" className="hover:text-white transition-colors">Special Offers</Link></li>
+                <li><Link to="/marketplace?sort=newest" className="hover:text-white transition-colors">New Arrivals</Link></li>
+                <li><Link to="/vendors" className="hover:text-white transition-colors">Browse Vendors</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-bold mb-4 text-nvm-gold-light">Community</h4>
+              <h4 className="font-bold mb-4 text-nvm-gold-light">Support</h4>
               <ul className="space-y-2 text-green-100">
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Our Story
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Vendor Blog
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Events
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white">
-                    Contact Us
-                  </a>
-                </li>
+                <li><Link to="/help" className="hover:text-white transition-colors">Help Centre</Link></li>
+                <li><Link to="/support" className="hover:text-white transition-colors">Contact Us</Link></li>
+                <li><Link to="/vendor/setup" className="hover:text-white transition-colors">Become a Vendor</Link></li>
+                <li><Link to="/register" className="hover:text-white transition-colors">Create Account</Link></li>
               </ul>
             </div>
           </div>
           <div className="border-t border-white/10 pt-8 text-center text-green-200 text-sm">
-            © 2024 NVM Marketplace. All rights reserved.
+            © 2026 NVM Marketplace. All rights reserved.
           </div>
         </div>
       </footer>
