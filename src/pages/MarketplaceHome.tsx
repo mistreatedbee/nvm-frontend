@@ -3,7 +3,6 @@ import { motion } from 'framer-motion';
 import { Hero } from '../components/Hero';
 import { Navbar } from '../components/Navbar';
 import { CategoryNav } from '../components/CategoryNav';
-import { CategorySection } from '../components/CategorySection';
 import { NewsletterSection } from '../components/NewsletterSection';
 import { ProductCard } from '../components/ProductCard';
 import { productsAPI, recommendationsAPI } from '../lib/api';
@@ -67,11 +66,6 @@ export function MarketplaceHome() {
     <div className="min-h-screen bg-white">
       <Navbar />
       <Hero />
-
-      {/* Category Navigation */}
-      <section className="bg-white">
-        <CategorySection />
-      </section>
 
       {/* ─── ALL PRODUCTS ─────────────────────────────────────── */}
       <section className="py-16 bg-nvm-green-bg">
