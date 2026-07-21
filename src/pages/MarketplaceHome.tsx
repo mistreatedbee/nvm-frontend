@@ -18,33 +18,35 @@ export function MarketplaceHome() {
   const [apiTrendingProducts, setApiTrendingProducts] = useState([]);
   const [newArrivals, setNewArrivals] = useState([]);
   const [recommendedProducts, setRecommendedProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingAll, setLoadingAll] = useState(true);
+  const [loadingFeatured, setLoadingFeatured] = useState(true);
+  const [loadingTrending, setLoadingTrending] = useState(true);
+  const [loadingNew, setLoadingNew] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [allRes, featuredRes, trendingRes, newRes] = await Promise.all([
-          productsAPI.getAll({ status: 'PUBLISHED', limit: 12 }),
-          productsAPI.getFeatured(),
-          productsAPI.getTrending({ range: '7d', limit: 8 }),
-          productsAPI.getNewArrivals({ limit: 8 }),
-        ]);
+    productsAPI.getAll({ status: 'PUBLISHED', limit: 12 })
+      .then((res) => setAllProducts(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoadingAll(false));
 
-        setAllProducts(allRes.data.data || []);
-        setApiFeaturedProducts(featuredRes.data.data || []);
-        setApiTrendingProducts(trendingRes.data.data || []);
-        setNewArrivals(newRes.data.data || []);
+    productsAPI.getFeatured()
+      .then((res) => setApiFeaturedProducts(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoadingFeatured(false));
 
-        if (isAuthenticated) {
-          recommendationsAPI.get({ limit: 8 }).then((res) => setRecommendedProducts(res.data.data || [])).catch(() => {});
-        }
-      } catch (error) {
-        console.error('Failed to fetch homepage data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
+    productsAPI.getTrending({ range: '7d', limit: 8 })
+      .then((res) => setApiTrendingProducts(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoadingTrending(false));
+
+    productsAPI.getNewArrivals({ limit: 8 })
+      .then((res) => setNewArrivals(res.data.data || []))
+      .catch(() => {})
+      .finally(() => setLoadingNew(false));
+
+    if (isAuthenticated) {
+      recommendationsAPI.get({ limit: 8 }).then((res) => setRecommendedProducts(res.data.data || [])).catch(() => {});
+    }
   }, [isAuthenticated]);
 
   const filteredFeatured = activeCategory === 'all'
@@ -94,7 +96,7 @@ export function MarketplaceHome() {
             </Link>
           </div>
 
-          {loading ? (
+          {loadingAll ? (
             <SkeletonGrid count={8} />
           ) : allProducts.length === 0 ? (
             <div className="bg-white border rounded-xl text-center py-16 text-gray-500">
@@ -153,7 +155,7 @@ export function MarketplaceHome() {
             <CategoryNav activeCategory={activeCategory} onSelect={setActiveCategory} />
           </div>
 
-          {loading ? (
+          {loadingFeatured ? (
             <SkeletonGrid count={8} />
           ) : filteredFeatured.length === 0 ? (
             <div className="bg-gray-50 border rounded-xl text-center py-16 text-gray-500">
@@ -209,7 +211,7 @@ export function MarketplaceHome() {
             </Link>
           </div>
 
-          {loading ? (
+          {loadingTrending ? (
             <SkeletonGrid count={8} />
           ) : apiTrendingProducts.length === 0 ? (
             <div className="bg-white border rounded-xl text-center py-16 text-gray-500">
@@ -252,7 +254,7 @@ export function MarketplaceHome() {
             </Link>
           </div>
 
-          {loading ? (
+          {loadingNew ? (
             <SkeletonGrid count={8} />
           ) : newArrivals.length === 0 ? (
             <div className="bg-gray-50 border rounded-xl text-center py-16 text-gray-500">
