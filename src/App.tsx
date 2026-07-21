@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { MarketplaceHome } from './pages/MarketplaceHome';
@@ -83,6 +83,13 @@ import { VendorMonetization } from './pages/VendorMonetization';
 // Note: VendorOrderTracking component is imported in VendorOrderManagement
 
 function App() {
+  useEffect(() => {
+    // Wake up the backend on app load (Render free-tier cold-start prevention)
+    const base = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api').replace(/\/+$/, '');
+    const url = base.endsWith('/api') ? base : `${base}/api`;
+    fetch(`${url}/products/new?limit=1`).catch(() => {});
+  }, []);
+
   return (
     <Router>
       <Routes>

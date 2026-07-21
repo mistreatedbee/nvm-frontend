@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Hero } from '../components/Hero';
 import { Navbar } from '../components/Navbar';
@@ -10,37 +10,61 @@ import { useAuthStore } from '../lib/store';
 import { ArrowRight, Sparkles, ShoppingBag, Flame, Star, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+const HP_CACHE_TTL = 5 * 60 * 1000;
+
+function readHpCache(key: string): any[] | null {
+  try {
+    const raw = localStorage.getItem(`nvm_hp_${key}`);
+    if (!raw) return null;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts > HP_CACHE_TTL) return null;
+    return data;
+  } catch { return null; }
+}
+
+function writeHpCache(key: string, data: any[]) {
+  try { localStorage.setItem(`nvm_hp_${key}`, JSON.stringify({ ts: Date.now(), data })); } catch {}
+}
+
 export function MarketplaceHome() {
   const { isAuthenticated } = useAuthStore();
   const [activeCategory, setActiveCategory] = useState('all');
-  const [allProducts, setAllProducts] = useState([]);
-  const [apiFeaturedProducts, setApiFeaturedProducts] = useState([]);
-  const [apiTrendingProducts, setApiTrendingProducts] = useState([]);
-  const [newArrivals, setNewArrivals] = useState([]);
-  const [recommendedProducts, setRecommendedProducts] = useState([]);
-  const [loadingAll, setLoadingAll] = useState(true);
-  const [loadingFeatured, setLoadingFeatured] = useState(true);
-  const [loadingTrending, setLoadingTrending] = useState(true);
-  const [loadingNew, setLoadingNew] = useState(true);
+
+  const _c = useRef({
+    all: readHpCache('all'),
+    featured: readHpCache('featured'),
+    trending: readHpCache('trending'),
+    newArrivals: readHpCache('new'),
+  }).current;
+
+  const [allProducts, setAllProducts] = useState<any[]>(_c.all || []);
+  const [apiFeaturedProducts, setApiFeaturedProducts] = useState<any[]>(_c.featured || []);
+  const [apiTrendingProducts, setApiTrendingProducts] = useState<any[]>(_c.trending || []);
+  const [newArrivals, setNewArrivals] = useState<any[]>(_c.newArrivals || []);
+  const [recommendedProducts, setRecommendedProducts] = useState<any[]>([]);
+  const [loadingAll, setLoadingAll] = useState(_c.all === null);
+  const [loadingFeatured, setLoadingFeatured] = useState(_c.featured === null);
+  const [loadingTrending, setLoadingTrending] = useState(_c.trending === null);
+  const [loadingNew, setLoadingNew] = useState(_c.newArrivals === null);
 
   useEffect(() => {
     productsAPI.getAll({ status: 'PUBLISHED', limit: 12 })
-      .then((res) => setAllProducts(res.data.data || []))
+      .then((res) => { const d = res.data.data || []; setAllProducts(d); writeHpCache('all', d); })
       .catch(() => {})
       .finally(() => setLoadingAll(false));
 
     productsAPI.getFeatured()
-      .then((res) => setApiFeaturedProducts(res.data.data || []))
+      .then((res) => { const d = res.data.data || []; setApiFeaturedProducts(d); writeHpCache('featured', d); })
       .catch(() => {})
       .finally(() => setLoadingFeatured(false));
 
     productsAPI.getTrending({ range: '7d', limit: 8 })
-      .then((res) => setApiTrendingProducts(res.data.data || []))
+      .then((res) => { const d = res.data.data || []; setApiTrendingProducts(d); writeHpCache('trending', d); })
       .catch(() => {})
       .finally(() => setLoadingTrending(false));
 
     productsAPI.getNewArrivals({ limit: 8 })
-      .then((res) => setNewArrivals(res.data.data || []))
+      .then((res) => { const d = res.data.data || []; setNewArrivals(d); writeHpCache('new', d); })
       .catch(() => {})
       .finally(() => setLoadingNew(false));
 
