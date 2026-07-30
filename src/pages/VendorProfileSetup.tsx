@@ -1,10 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Navbar } from '../components/Navbar';
 import { useNavigate } from 'react-router-dom';
 import { vendorsAPI } from '../lib/api';
 import { useAuthStore } from '../lib/store';
 import toast from 'react-hot-toast';
+
+// PAAQ telemetry: verbose performance tracing for health score diagnosis
+function reportPerfMetric(name: string, value: number) {
+  try {
+    if (typeof window !== 'undefined' && (window as any).__PAAQ_TELEMETRY__) {
+      (window as any).__PAAQ_TELEMETRY__.push({ name, value, ts: Date.now(), route: window.location.pathname });
+    }
+    if (process.env.NODE_ENV === 'development') {
+      console.debug(`[PAAQ perf] ${name}: ${value.toFixed(2)}ms @ ${window.location.pathname}`);
+    }
+  } catch (_) {}
+}
 import {
   Store,
   MapPin,
@@ -113,6 +125,32 @@ export function VendorProfileSetup() {
   });
 
   const [loading, setLoading] = useState(false);
+  const renderStartRef = useRef<number>(performance.now());
+
+  // PAAQ verbose telemetry: capture render latency and step interaction timing
+  useEffect(() => {
+    const renderDuration = performance.now() - renderStartRef.current;
+    reportPerfMetric('VendorProfileSetup.renderDuration', renderDuration);
+
+    const navigationEntry = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined;
+    if (navigationEntry) {
+      reportPerfMetric('navigation.domInteractive', navigationEntry.domInteractive);
+      reportPerfMetric('navigation.domComplete', navigationEntry.domComplete);
+      reportPerfMetric('navigation.loadEventEnd', navigationEntry.loadEventEnd);
+    }
+
+    const paintEntries = performance.getEntriesByType('paint');
+    paintEntries.forEach((entry) => {
+      reportPerfMetric(`paint.${entry.name.replace(/\s+/g, '_')}`, entry.startTime);
+    });
+  }, []);
+
+  useEffect(() => {
+    const stepStart = performance.now();
+    return () => {
+      reportPerfMetric(`VendorProfileSetup.step${step}.dwellTime`, performance.now() - stepStart);
+    };
+  }, [step]);
 
   const handleInputChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
