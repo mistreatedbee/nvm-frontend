@@ -91,7 +91,6 @@ export function MarketplaceHome() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      <Hero />
 
       {/* ─── ALL PRODUCTS ─────────────────────────────────────── */}
       <section className="py-16 bg-nvm-green-bg">
@@ -144,6 +143,8 @@ export function MarketplaceHome() {
           </div>
         </div>
       </section>
+
+      <Hero />
 
       {/* ─── FEATURED PRODUCTS ───────────────────────────────── */}
       <section className="py-16 bg-white relative overflow-hidden">
