@@ -16,6 +16,15 @@ let sessionId: string | null = null;
 let deviceId: string | null = null;
 let queue: object[] = [];
 let flushTimer: ReturnType<typeof setInterval> | null = null;
+let sessionStartTime: number | null = null;
+
+export const OutcomeType = {
+  PURCHASE_COMPLETE: 'PURCHASE_COMPLETE',
+  REGISTRATION_COMPLETE: 'REGISTRATION_COMPLETE',
+  VENDOR_ONBOARDED: 'VENDOR_ONBOARDED',
+} as const;
+
+export type OutcomeType = typeof OutcomeType[keyof typeof OutcomeType];
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -45,6 +54,38 @@ export function track(eventName: string, properties: Record<string, unknown> = {
   });
 }
 
+export function trackOutcome(outcomeType: OutcomeType, properties: Record<string, unknown> = {}): void {
+  if (!sessionId) return;
+  const durationMs = sessionStartTime != null ? Date.now() - sessionStartTime : undefined;
+  queue.push({
+    event_name: 'outcome',
+    session_id: sessionId,
+    screen_name: window.location.pathname,
+    properties: {
+      outcome_type: outcomeType,
+      ...(durationMs != null ? { session_duration_ms: durationMs } : {}),
+      ...properties,
+    },
+    timestamp: new Date().toISOString(),
+  });
+  flush();
+}
+
+function flushSessionDuration(): void {
+  if (!sessionId || sessionStartTime == null) return;
+  const durationMs = Date.now() - sessionStartTime;
+  queue.push({
+    event_name: 'session_end',
+    session_id: sessionId,
+    screen_name: window.location.pathname,
+    properties: {
+      duration_ms: durationMs,
+    },
+    timestamp: new Date().toISOString(),
+  });
+  flush();
+}
+
 async function flush(): Promise<void> {
   if (!sessionId || queue.length === 0) return;
   const batch = queue.splice(0, 50);
@@ -59,13 +100,23 @@ export async function initPaaq(): Promise<void> {
   await handshake();
   if (!sessionId) return;
 
+  sessionStartTime = Date.now();
+
   // Track page views on navigation
   track('page_view', { path: window.location.pathname });
   window.addEventListener('popstate', () => track('page_view', { path: window.location.pathname }));
 
-  // Flush every 30 seconds and on page unload
+  // Flush every 30 seconds
   flushTimer = setInterval(flush, 30_000);
+
+  // Flush session duration and events when tab is hidden or page is unloaded
   window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') flush();
+    if (document.visibilityState === 'hidden') {
+      flushSessionDuration();
+    }
+  });
+
+  window.addEventListener('beforeunload', () => {
+    flushSessionDuration();
   });
 }
