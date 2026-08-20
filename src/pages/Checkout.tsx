@@ -6,7 +6,7 @@ import { Navbar } from '../components/Navbar';
 import { useCartStore, useAuthStore, useLoginPromptStore } from '../lib/store';
 import { addressesAPI, cartAPI, checkoutAPI, helpAPI, logisticsAPI, ordersAPI, isAuthRequiredError, getErrorMessage } from '../lib/api';
 import { formatRands, TAX_RATE } from '../lib/currency';
-import { FileText, MapPin, CheckCircle, Minus, Plus } from 'lucide-react';
+import { FileText, MapPin, CheckCircle, Minus, Plus, LocateFixed, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface CheckoutForm {
@@ -55,8 +55,56 @@ export function Checkout() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<CheckoutForm>();
+  const [locating, setLocating] = useState(false);
+  const [locationCaptured, setLocationCaptured] = useState(false);
+
+  const useMyLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error('Location access is not supported by this browser');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+        setValue('lat', String(latitude));
+        setValue('lng', String(longitude));
+        setLocationCaptured(true);
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+          );
+          const data = await res.json();
+          const addr = data?.address || {};
+          if (addr.road || addr.house_number) {
+            setValue('street', [addr.house_number, addr.road].filter(Boolean).join(' '));
+          }
+          if (addr.city || addr.town || addr.village) {
+            setValue('city', addr.city || addr.town || addr.village);
+          }
+          if (addr.state) setValue('state', addr.state);
+          if (addr.postcode) setValue('zipCode', addr.postcode);
+          toast.success('Location found — address filled in, please double-check it');
+        } catch {
+          toast.success('Location captured. Please fill in your address details below.');
+        } finally {
+          setLocating(false);
+        }
+      },
+      (error) => {
+        setLocating(false);
+        const message =
+          error.code === error.PERMISSION_DENIED
+            ? 'Location access denied. Please enter your address manually.'
+            : 'Could not get your location. Please enter your address manually.';
+        toast.error(message);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
 
   useEffect(() => {
     const loadCart = async () => {
@@ -435,6 +483,18 @@ export function Checkout() {
                   <h2 className="text-xl font-display font-bold">Shipping Information</h2>
                 </div>
 
+                <button
+                  type="button"
+                  onClick={useMyLocation}
+                  disabled={locating || Boolean(selectedAddressId)}
+                  className="mb-4 inline-flex items-center gap-2 px-4 py-2.5 min-h-[44px] border border-nvm-green-300 bg-nvm-green-50 text-nvm-green-700 rounded-lg font-medium text-sm hover:bg-nvm-green-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {locating ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+                  {locating ? 'Finding your location…' : locationCaptured ? 'Location captured ✓ — use my location again' : 'Use My Current Location'}
+                </button>
+                <input type="hidden" {...register('lat')} />
+                <input type="hidden" {...register('lng')} />
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {isAuthenticated && savedAddresses.length > 0 && (
                     <div className="md:col-span-2">
@@ -523,26 +583,6 @@ export function Checkout() {
                       placeholder="2000"
                     />
                     {errors.zipCode && <p className="mt-1 text-sm text-red-600">{errors.zipCode.message}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Latitude (optional)</label>
-                    <input
-                      type="text"
-                      {...register('lat')}
-                      disabled={Boolean(selectedAddressId)}
-                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
-                      placeholder="-26.2041"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Longitude (optional)</label>
-                    <input
-                      type="text"
-                      {...register('lng')}
-                      disabled={Boolean(selectedAddressId)}
-                      className="w-full px-4 py-3 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-nvm-green-500"
-                      placeholder="28.0473"
-                    />
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">Delivery Method</label>
