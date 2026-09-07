@@ -1,22 +1,12 @@
+import { PAAQ } from '@paaq/sdk';
+
+// Same PAAQ project credentials the hand-rolled client previously used
+// directly against the Supabase edge functions. The SDK now owns session
+// id, device id, batching, retries, the periodic heartbeat, and (in the
+// browser build) automatic performance monitoring — none of that needs to
+// be reimplemented here anymore.
 const SDK_TOKEN = 'sdk_live_ms1g8305sh182b9n8m1baszlqth599km';
 const PROJECT_KEY = 'proj_cxgmjznf';
-const HANDSHAKE_URL = 'https://mookyonwpovxscsbqwwl.supabase.co/functions/v1/sdk-init';
-const EVENTS_URL = 'https://mookyonwpovxscsbqwwl.supabase.co/functions/v1/events';
-
-const HEADERS = {
-  'Authorization': `Bearer ${SDK_TOKEN}`,
-  'X-Project-ID': PROJECT_KEY,
-  'X-SDK-Version': '1.0.0',
-  'X-Platform': 'react',
-  'X-Environment': 'production',
-  'Content-Type': 'application/json',
-};
-
-let sessionId: string | null = null;
-let deviceId: string | null = null;
-let queue: object[] = [];
-let flushTimer: ReturnType<typeof setInterval> | null = null;
-let sessionStartTime: number | null = null;
 
 export const OutcomeType = {
   PURCHASE_COMPLETE: 'PURCHASE_COMPLETE',
@@ -26,97 +16,41 @@ export const OutcomeType = {
 
 export type OutcomeType = typeof OutcomeType[keyof typeof OutcomeType];
 
-function generateId(): string {
-  return crypto.randomUUID();
-}
-
-async function handshake(): Promise<void> {
-  try {
-    const res = await fetch(HANDSHAKE_URL, { method: 'POST', headers: HEADERS, body: '{}' });
-    const data = await res.json();
-    if (data.ok) {
-      sessionId = data.sessionId;
-      deviceId = data.deviceId;
-    }
-  } catch {
-    // silent — analytics must never break the app
-  }
-}
+let ready = false;
 
 export function track(eventName: string, properties: Record<string, unknown> = {}): void {
-  if (!sessionId) return;
-  queue.push({
-    event_name: eventName,
-    session_id: sessionId,
-    screen_name: window.location.pathname,
-    properties,
-    timestamp: new Date().toISOString(),
-  });
+  if (!ready) return;
+  PAAQ.track(eventName, properties);
 }
 
-export function trackOutcome(outcomeType: OutcomeType, properties: Record<string, unknown> = {}): void {
-  if (!sessionId) return;
-  const durationMs = sessionStartTime != null ? Date.now() - sessionStartTime : undefined;
-  queue.push({
-    event_name: 'outcome',
-    session_id: sessionId,
-    screen_name: window.location.pathname,
-    properties: {
-      outcome_type: outcomeType,
-      ...(durationMs != null ? { session_duration_ms: durationMs } : {}),
-      ...properties,
-    },
-    timestamp: new Date().toISOString(),
-  });
-  flush();
-}
-
-function flushSessionDuration(): void {
-  if (!sessionId || sessionStartTime == null) return;
-  const durationMs = Date.now() - sessionStartTime;
-  queue.push({
-    event_name: 'session_end',
-    session_id: sessionId,
-    screen_name: window.location.pathname,
-    properties: {
-      duration_ms: durationMs,
-    },
-    timestamp: new Date().toISOString(),
-  });
-  flush();
-}
-
-async function flush(): Promise<void> {
-  if (!sessionId || queue.length === 0) return;
-  const batch = queue.splice(0, 50);
-  try {
-    await fetch(EVENTS_URL, { method: 'POST', headers: HEADERS, body: JSON.stringify(batch) });
-  } catch {
-    // silent
-  }
+export async function trackOutcome(outcomeType: OutcomeType, properties: Record<string, unknown> = {}): Promise<void> {
+  if (!ready) return;
+  // endSession() is the SDK's purpose-built outcome API — it reports the
+  // outcome plus session duration in one call and flushes immediately,
+  // same as the old track('outcome', ...) + flush() pairing.
+  track('outcome', { outcome_type: outcomeType, ...properties });
+  await PAAQ.endSession(outcomeType);
 }
 
 export async function initPaaq(): Promise<void> {
-  await handshake();
-  if (!sessionId) return;
+  try {
+    const result = await PAAQ.initialize({ sdkToken: SDK_TOKEN, projectId: PROJECT_KEY });
+    ready = Boolean(result?.ok);
+  } catch {
+    // analytics must never break the app
+    return;
+  }
+  if (!ready) return;
 
-  sessionStartTime = Date.now();
+  PAAQ.page(window.location.pathname);
+  window.addEventListener('popstate', () => PAAQ.page(window.location.pathname));
 
-  // Track page views on navigation
-  track('page_view', { path: window.location.pathname });
-  window.addEventListener('popstate', () => track('page_view', { path: window.location.pathname }));
-
-  // Flush every 30 seconds
-  flushTimer = setInterval(flush, 30_000);
-
-  // Flush session duration and events when tab is hidden or page is unloaded
+  // Best-effort flush before the tab goes away — the SDK still owns its
+  // own periodic flush/heartbeat timers regardless.
   window.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      flushSessionDuration();
-    }
+    if (document.visibilityState === 'hidden') void PAAQ.flush();
   });
-
   window.addEventListener('beforeunload', () => {
-    flushSessionDuration();
+    void PAAQ.flush();
   });
 }
